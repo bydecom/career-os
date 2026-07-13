@@ -1,2 +1,2 @@
-export * from './taxonomy';
-export * from './types';
+export * from './taxonomy.js';
+export * from './types.js';

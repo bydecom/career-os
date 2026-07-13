@@ -1,0 +1,20 @@
+{
+  "name": "@career-os/cli",
+  "version": "1.0.0",
+  "description": "CareerOS CLI — career compile, career validate",
+  "type": "module",
+  "bin": {
+    "career": "./src/index.js"
+  },
+  "dependencies": {
+    "@career-os/compiler": "*",
+    "@career-os/embedding": "*",
+    "@career-os/graph-store": "*",
+    "@career-os/ontology": "*",
+    "@career-os/retriever": "*"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4",
+    "@types/node": "^20.14.11"
+  }
+}

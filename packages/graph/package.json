@@ -1,0 +1,28 @@
+{
+  "name": "@career-os/graph",
+  "version": "1.0.0",
+  "description": "Pure graph algorithms over the Knowledge Graph IR — adjacency, Personalized PageRank, edge-type traversal. Zero I/O.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@career-os/ontology": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.11",
+    "typescript": "^5.5.4",
+    "vitest": "^4.1.10"
+  }
+}

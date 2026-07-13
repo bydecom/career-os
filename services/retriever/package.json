@@ -1,0 +1,29 @@
+{
+  "name": "@career-os/retriever",
+  "version": "1.0.0",
+  "description": "Hybrid Retrieval Engine — Progressive Certainty Retrieval (Metadata Lookup + Graph PPR + BM25 + RRF)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@career-os/graph": "*",
+    "@career-os/ontology": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.11",
+    "typescript": "^5.5.4",
+    "vitest": "^4.1.10"
+  }
+}

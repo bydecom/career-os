@@ -1,22 +1,41 @@
 {
-  "name": "career-knowledge-base",
+  "name": "career-os",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "CareerOS — Personal Knowledge Compiler",
+  "private": true,
   "directories": {
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "bootstrap": "node scripts/bootstrap.js",
-    "check-structure": "node scripts/check-structure.js"
+    "check-structure": "node scripts/check-structure.js",
+    "compile": "node apps/cli/dist/index.js compile --verbose",
+    "validate": "node apps/cli/dist/index.js validate --verbose",
+    "build:ontology": "cd packages/ontology && tsc",
+    "build:graph": "cd packages/graph && tsc",
+    "build:graph-store": "cd packages/graph-store && tsc",
+    "build:compiler": "cd packages/compiler && tsc",
+    "build:embedding": "cd services/embedding && tsc",
+    "build:retriever": "cd services/retriever && tsc",
+    "build:cli": "cd apps/cli && tsc",
+    "build": "npm run build:ontology && npm run build:graph && npm run build:graph-store && npm run build:compiler && npm run build:embedding && npm run build:retriever && npm run build:cli",
+    "query": "node apps/cli/dist/index.js query",
+    "index:embeddings": "node scripts/index-embeddings.mjs",
+    "qdrant:up": "docker compose up -d qdrant",
+    "qdrant:down": "docker compose down",
+    "benchmark:retrieval": "node scripts/benchmark-retrieval.mjs",
+    "test": "npm run test --workspace=packages/compiler && npm run test --workspace=packages/graph && npm run test --workspace=packages/graph-store && npm run test --workspace=services/embedding && npm run test --workspace=services/retriever"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Bang Thai Minh",
+  "license": "MIT",
   "workspaces": [
     "packages/*",
     "apps/*",
     "services/*"
-  ]
+  ],
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "typescript": "^7.0.2"
+  }
 }

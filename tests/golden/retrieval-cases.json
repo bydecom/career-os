@@ -1,0 +1,77 @@
+[
+  {
+    "id": "rabbitmq-direct",
+    "query": "Why did you use RabbitMQ?",
+    "relevantNodeIds": ["rabbitmq", "ecommerce-platform"]
+  },
+  {
+    "id": "message-broker-alias",
+    "query": "what message broker have you used in production",
+    "relevantNodeIds": ["rabbitmq"]
+  },
+  {
+    "id": "redis-cache-decision",
+    "query": "why did you add a redis cache layer to reduce database load",
+    "relevantNodeIds": ["redis", "ecommerce-platform"]
+  },
+  {
+    "id": "ecommerce-latency-metric",
+    "query": "async worker giảm latency xuống 10ms",
+    "relevantNodeIds": ["ecommerce-platform"]
+  },
+  {
+    "id": "medical-citation-deterministic",
+    "query": "deterministic medical extraction without LLM hallucination",
+    "relevantNodeIds": ["medical-citation-agent"]
+  },
+  {
+    "id": "graphrag-bidirectional-ppr",
+    "query": "bidirectional personalized pagerank precision improvement",
+    "relevantNodeIds": ["graphrag-code"]
+  },
+  {
+    "id": "container-bay-plan",
+    "query": "container bay plan validator constraint solving",
+    "relevantNodeIds": ["container-bay-plan-validator"]
+  },
+  {
+    "id": "match3-game",
+    "query": "2D match-3 puzzle game framework",
+    "relevantNodeIds": ["match-3-puzzle-game", "phaser"]
+  },
+  {
+    "id": "movie-theater-booking",
+    "query": "movie theater seat booking and ticket management system",
+    "relevantNodeIds": ["movie-theater-management-system"]
+  },
+  {
+    "id": "fpt-software-experience",
+    "query": "internship at FPT Software as a full-stack developer",
+    "relevantNodeIds": ["fpt-software", "fpt-software-ojt"]
+  },
+  {
+    "id": "conversational-state-machine",
+    "query": "conversational state machine for structured dialogue flow",
+    "relevantNodeIds": ["conversational-state-machine"]
+  },
+  {
+    "id": "vnpay-payment",
+    "query": "which payment gateway did you integrate",
+    "relevantNodeIds": ["vnpay", "ecommerce-platform"]
+  },
+  {
+    "id": "typescript-language",
+    "query": "TypeScript",
+    "relevantNodeIds": ["typescript"]
+  },
+  {
+    "id": "gemini-embeddings",
+    "query": "gemini embeddings and vector search for products",
+    "relevantNodeIds": ["gemini-ai", "qdrant", "ecommerce-platform"]
+  },
+  {
+    "id": "career-os-project",
+    "query": "knowledge compiler that turns markdown into a career knowledge graph",
+    "relevantNodeIds": ["career-os"]
+  }
+]

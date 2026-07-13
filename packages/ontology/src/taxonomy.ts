@@ -4,6 +4,7 @@ export enum NodeType {
   Experience = 'experience',
   Company = 'company',
   Decision = 'decision',
+  Achievement = 'achievement',
   Pattern = 'pattern',
   Metric = 'metric',
   Evidence = 'evidence',

@@ -1,4 +1,4 @@
-import { NodeType, EdgeType } from './taxonomy';
+import { NodeType, EdgeType } from './taxonomy.js';
 
 // -----------------------------------------------------------------------------
 // Source Tracking (For Compiler Diagnostics)

@@ -17,19 +17,19 @@ CareerOS is built progressively based on **Business Capabilities**, moving from 
 
 ## Phase 1: Knowledge Engine Core
 *Goal: CareerOS can compile Markdown into Knowledge.*
-- [ ] Implement Zod Schemas for AST and FrontMatter Validation
-- [ ] Build the `services/parser` (Markdown Lexer, AST Parser, Semantic Analyzer)
-- [ ] Build the Ontology Validator
-- [ ] Build the Graph Construction Worker
-- [ ] Create CLI tools (e.g., `career compile`)
+- [x] Implement Zod Schemas for AST and FrontMatter Validation
+- [x] Build the `packages/compiler` (Markdown Lexer, AST Parser, Semantic Analyzer) — originally planned as `services/parser`
+- [x] Build the Ontology Validator
+- [x] Build the Graph Construction Worker
+- [x] Create CLI tools (e.g., `career compile`)
 
 ## Phase 2: Knowledge Retrieval Engine
 *Goal: CareerOS can deterministically retrieve facts and semantic context.*
-- [ ] Implement BM25 Keyword Indexing
-- [ ] Implement Graph Traversal (Bidirectional PageRank)
-- [ ] Implement Vector Embeddings (Qdrant)
-- [ ] Implement Reciprocal Rank Fusion (RRF) for Hybrid Ranking
-- [ ] Establish Retrieval Benchmarks (Precision/Recall testing)
+- [x] Implement BM25 Keyword Indexing
+- [x] Implement Graph Traversal (Bidirectional PageRank)
+- [x] Implement Vector Embeddings (Qdrant)
+- [x] Implement Reciprocal Rank Fusion (RRF) for Hybrid Ranking
+- [x] Establish Retrieval Benchmarks (Precision/Recall testing)
 
 ## Phase 3: Knowledge Conversation Engine
 *Goal: The AI can logically formulate responses based on retrieved evidence.*

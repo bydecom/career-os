@@ -1,0 +1,28 @@
+{
+  "name": "@career-os/graph-store",
+  "version": "1.0.0",
+  "description": "SQLite persistence for the compiled Knowledge Graph IR — write once at compile time, read by the retriever/API. Uses Node's built-in node:sqlite (zero native dependency).",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "build:watch": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@career-os/ontology": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "typescript": "^5.5.4",
+    "vitest": "^4.1.10"
+  }
+}
