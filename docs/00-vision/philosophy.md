@@ -29,7 +29,10 @@ Factual relationships (`USED_IN`, `SOLVES`) cannot be reliably inferred by LLM e
 Data domain modeling precedes UI design. The Knowledge Object does not know if it will be rendered as a PDF, a React component, or a Chat response. It remains presentation-independent.
 
 ### 8. AI is a View
-The AI is not a database. It is not an agent that owns your knowledge. It is merely a linguistic rendering engine (a "View") that verbalizes the retrieved Knowledge Package.
+The AI is not a database. It is not an agent that owns your knowledge. It is merely a linguistic rendering engine (a "View") that verbalizes retrieved knowledge (ConversationIR). Protocols such as MCP are adapters — not the product.
+
+### 8b. Skills are the Interface (emerging)
+Knowledge is the product. Skills are the domain interface (`search_nodes`, `explain_decision`, …). CLI, REST, MCP, and bots are protocol adapters over the same Skill registry. See [10-platform-capability-map.md](./10-platform-capability-map.md).
 
 ### 9. Human is the Authority
 The AI is strictly forbidden from creating net-new knowledge or hallucinating facts. The human engineer is the sole authoritative author of the Markdown source code. The AI only transforms what exists.

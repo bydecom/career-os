@@ -15,6 +15,7 @@ const EXPECTED_DIRS = [
   'career-data/nodes/project',
   'career-data/nodes/experience',
   'career-data/nodes/company',
+  'career-data/nodes/profile',
   'career-data/nodes/decision',
   'career-data/nodes/achievement',
   'career-data/nodes/concept',

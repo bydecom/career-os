@@ -1,16 +1,19 @@
 {
   "name": "@career-os/cli",
   "version": "1.0.0",
-  "description": "CareerOS CLI — career compile, career validate",
+  "description": "CareerOS CLI — compile, validate, query, ask, resume",
   "type": "module",
   "bin": {
     "career": "./src/index.js"
   },
   "dependencies": {
     "@career-os/compiler": "*",
+    "@career-os/conversation": "*",
     "@career-os/embedding": "*",
     "@career-os/graph-store": "*",
+    "@career-os/llm": "*",
     "@career-os/ontology": "*",
+    "@career-os/resume": "*",
     "@career-os/retriever": "*"
   },
   "devDependencies": {

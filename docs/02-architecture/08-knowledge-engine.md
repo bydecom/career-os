@@ -14,11 +14,11 @@ CareerOS explicitly rejects this. **The AI does not pretend to be the candidate.
 
 Instead, the AI is a **Knowledge Interface** operating over a verified career database. This manages user expectations, prevents uncanny-valley interactions, and maintains strict professional integrity.
 
-> *"I am the CareerOS Knowledge Engine. I can query Bang's verified project history, architecture decisions, and metrics. What would you like to know?"*
+> *"I am the CareerOS Knowledge Interface. I can query Bang's verified project history, architecture decisions, and metrics. What would you like to know?"*
 
 ---
 
-## 2. The Engine Pipeline
+## 2. The Conversation Pipeline
 
 The conversation flow is not a direct API call to an LLM. It is a multi-stage pipeline:
 
@@ -26,19 +26,19 @@ The conversation flow is not a direct API call to an LLM. It is a multi-stage pi
 User Question
       │
       ▼
-Intent & Audience Classifier (Strategy Engine)
+Intent & Audience Classifier (Strategy — v2+)
       │
       ▼
-Hybrid Retriever (PCR)
+Hybrid Retriever (PCR) — Runtime
       │
       ▼
-Knowledge Package Builder (IR to Context)
+ConversationIR Builder (+ budget)
       │
       ▼
-Response Planner (Tone & Structure)
+Response Planner (Tone & Structure — v2+)
       │
       ▼
-LLM (Verbalization)
+LLM (Verbalization of ConversationIR)
       │
       ▼
 UI Renderer (Markdown + Interactive Citations)
@@ -61,18 +61,9 @@ Instead of hardcoding "HR" vs "Tech Lead" prompts, the Strategy Engine dynamical
 
 The LLM is NOT prompted to *"Answer the question"*. 
 
-It is prompted to: *"Verbalize this Knowledge Package."*
+It is prompted to: *"Verbalize this ConversationIR."*
 
-The Retriever builds a strict JSON payload:
-```json
-{
-  "nodes": [...],
-  "edges": [...],
-  "metrics": [...],
-  "decisions": [...]
-}
-```
-The LLM acts purely as a linguistic formatter, translating the structured JSON graph into natural language. It is strictly forbidden from introducing external facts.
+The runtime builds a structured ConversationIR (anchors, candidates, edges, retrieval trace, retrieval confidence). The LLM acts purely as a linguistic formatter. It is strictly forbidden from introducing external facts.
 
 ---
 

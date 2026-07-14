@@ -14,13 +14,15 @@
 
 ## Vision
 
-CareerOS is a Knowledge Operating System.
+CareerOS is a Knowledge Platform.
 
 It does not store resumes.
 It does not store portfolios.
-It stores knowledge.
+It stores knowledge — then **compiles** that knowledge into reusable runtime capabilities.
 
-Everything else is generated.
+Every output—Resume, Portfolio, Chatbot, MCP, or API—is simply a different projection of the same compiled Knowledge Graph.
+
+See also: [Platform Capability Map](./10-platform-capability-map.md) (long-range: Compiler → Runtime → Skills → Views → Harness).
 
 ---
 
@@ -49,10 +51,10 @@ Instead of storing documents, CareerOS stores knowledge. Every document is gener
 CareerOS is not a website. It is a compiler.
 
 - **Source Code**: Markdown (Atomic Nodes)
-- **Compiler Front-end**: Parser
-- **Intermediate Representation (IR)**: Knowledge Graph
-- **Optimizer**: Hybrid Retriever
-- **Binary Outputs**: Resume, Portfolio, Chatbot, Interview Assistant
+- **Compiler Front-end**: Parser / Validator / Graph Builder
+- **Intermediate Representation (IR)**: Knowledge Graph (plus optional vector index)
+- **Runtime**: Hybrid Retriever + ConversationIR + LLM verbalization
+- **Projections (Views)**: Resume, Portfolio, Chatbot, Interview Assistant
 
 ```text
 Experience 
@@ -70,10 +72,10 @@ Validate (Schema)
 Knowledge Graph (IR)
     │
     ▼
-Hybrid Retrieval
+Hybrid Retrieval (Runtime)
     │
     ▼
-AI / Resume / Portfolio / Interview
+ConversationIR → LLM Verbalize / Resume / Portfolio / Interview
     │
     ▼
 Feedback

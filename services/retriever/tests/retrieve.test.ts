@@ -44,7 +44,7 @@ describe('Retriever.retrieve', () => {
   const retriever = new Retriever(graph);
 
   it('anchors on a metadata match and expands to the connected project via graph traversal', () => {
-    const results = retriever.retrieve('Why did you use RabbitMQ?');
+    const { results } = retriever.retrieve('Why did you use RabbitMQ?');
 
     const ids = results.map((r) => r.node.id);
     expect(ids[0]).toBe('rabbitmq'); // exact anchor always ranks first (Metadata weight 4.0)
@@ -52,41 +52,49 @@ describe('Retriever.retrieve', () => {
   });
 
   it('resolves a multi-word alias to its anchor node', () => {
-    const results = retriever.retrieve('what message broker did you use in production');
+    const { results } = retriever.retrieve('what message broker did you use in production');
 
     expect(results[0]?.node.id).toBe('rabbitmq');
   });
 
   it('falls back to BM25 lexical search when no metadata anchor is found', () => {
-    const results = retriever.retrieve('reduce database load with caching');
+    const { results } = retriever.retrieve('reduce database load with caching');
 
     expect(results[0]?.node.id).toBe('redis');
   });
 
   it('does not return unrelated nodes for a narrow, unrelated query', () => {
-    const results = retriever.retrieve('2D game framework');
+    const { results } = retriever.retrieve('2D game framework');
 
     const ids = results.map((r) => r.node.id);
     expect(ids).toContain('phaser');
     expect(ids).not.toContain('rabbitmq');
   });
 
-  it('attaches a human-readable explanation to every result', () => {
-    const results = retriever.retrieve('RabbitMQ');
+  it('attaches a human-readable explanation and engines to every result', () => {
+    const { results } = retriever.retrieve('RabbitMQ');
 
     for (const result of results) {
       expect(result.explanation.reasons.length).toBeGreaterThan(0);
+      expect(result.explanation.engines.length).toBeGreaterThan(0);
     }
   });
 
+  it('exposes a per-engine retrieval breakdown for query logs', () => {
+    const { retrieval } = retriever.retrieve('RabbitMQ');
+
+    expect(retrieval.metadata).toContain('rabbitmq');
+    expect(retrieval.bm25.length).toBeGreaterThan(0);
+  });
+
   it('respects the topK option', () => {
-    const results = retriever.retrieve('platform', { topK: 1 });
+    const { results } = retriever.retrieve('platform', { topK: 1 });
 
     expect(results).toHaveLength(1);
   });
 
-  it('returns an empty array for a query matching nothing', () => {
-    const results = retriever.retrieve('completely unrelated nonsense zzz');
+  it('returns an empty results array for a query matching nothing', () => {
+    const { results } = retriever.retrieve('completely unrelated nonsense zzz');
 
     expect(results).toEqual([]);
   });

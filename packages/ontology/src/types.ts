@@ -67,6 +67,17 @@ export interface ExperienceMetadata extends BaseMetadata {
   endDate?: string;
 }
 
+/** Presentation / projection metadata for resume header. Not domain ontology. */
+export interface ProfileMetadata extends BaseMetadata {
+  headline?: string;
+  location?: string;
+  email?: string;
+  github?: string;
+  linkedin?: string;
+  website?: string;
+  summary?: string;
+}
+
 // -----------------------------------------------------------------------------
 // The Node Model
 // -----------------------------------------------------------------------------

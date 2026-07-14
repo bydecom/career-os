@@ -14,6 +14,8 @@ export enum NodeType {
   Article = 'article',
   Certificate = 'certificate',
   Person = 'person',
+  /** Presentation node for resume/portfolio header. May merge into Person in v2. */
+  Profile = 'profile',
   Organization = 'organization',
   Award = 'award',
   Presentation = 'presentation',

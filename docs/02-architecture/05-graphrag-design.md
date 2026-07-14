@@ -6,13 +6,15 @@
 
 ---
 
-## 1. The Optimizer Layer
+## 1. The Runtime Retrieval Layer
 
-In the CareerOS Knowledge Compiler architecture, GraphRAG acts as the **Optimizer**. 
+In the CareerOS architecture, GraphRAG sits in the **Runtime** (not a compile-time Optimizer pass).
 
-It takes a natural language query, traverses the Intermediate Representation (Knowledge IR), and extracts the most highly relevant, deterministic subgraph of knowledge before passing it to the Generation Engine (LLM).
+It takes a natural language query, traverses the Intermediate Representation (Knowledge IR), and extracts the most highly relevant, deterministic subgraph of knowledge before that subgraph is assembled into ConversationIR and verbalized by the LLM.
 
 Standard RAG (Vector-only) fails in career applications because it relies entirely on fuzzy semantic similarity, which destroys causal relationships and facts. CareerOS implements **Progressive Certainty Retrieval (PCR)** to solve this.
+
+> Note: A future **Knowledge Optimizer** (v2+) may precompute indexes / compress the graph at compile time. That is separate from runtime retrieval.
 
 ---
 

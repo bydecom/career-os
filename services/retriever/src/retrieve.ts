@@ -26,11 +26,26 @@ export interface RetrievalExplanation {
   score: number;
   /** Human-readable reasons this node was retrieved, one per contributing engine. */
   reasons: string[];
+  /** Engines that contributed to this node's fused score (for ConversationIR / logs). */
+  engines: RankedList['engine'][];
 }
 
 export interface RetrieveResult {
   node: KnowledgeNode<any>;
   explanation: RetrievalExplanation;
+}
+
+/** Per-engine node ID lists before fusion — used by query logs and ConversationIR. */
+export interface RetrievalBreakdown {
+  metadata: string[];
+  graph: string[];
+  bm25: string[];
+  vector: string[];
+}
+
+export interface RetrieveOutcome {
+  results: RetrieveResult[];
+  retrieval: RetrievalBreakdown;
 }
 
 export interface RetrieveOptions {
@@ -80,12 +95,20 @@ export class Retriever {
   }
 
   /** Deterministic path only: Metadata Lookup + Graph PPR + BM25. No network calls. */
-  retrieve(query: string, options: RetrieveOptions = {}): RetrieveResult[] {
+  retrieve(query: string, options: RetrieveOptions = {}): RetrieveOutcome {
     const { topK } = { ...DEFAULTS, ...options };
     const { metadataMatches, metadataList, graphList, bm25List } = this.computeRankedLists(query, options);
 
     const fused = fuseRankings([metadataList, graphList, bm25List]);
-    return this.toResults(fused, topK, metadataMatches);
+    return {
+      results: this.toResults(fused, topK, metadataMatches),
+      retrieval: {
+        metadata: metadataList.nodeIds,
+        graph: graphList.nodeIds,
+        bm25: bm25List.nodeIds,
+        vector: [],
+      },
+    };
   }
 
   /**
@@ -101,7 +124,7 @@ export class Retriever {
     embedder: TextEmbedder,
     vectorSearcher: VectorSearcher,
     options: HybridRetrieveOptions = {}
-  ): Promise<RetrieveResult[]> {
+  ): Promise<RetrieveOutcome> {
     const { topK, vectorTopK = 20 } = { ...DEFAULTS, ...options };
     const { metadataMatches, metadataList, graphList, bm25List } = this.computeRankedLists(query, options);
 
@@ -110,7 +133,15 @@ export class Retriever {
     const vectorList: RankedList = { engine: 'vector', nodeIds: vectorMatches.map((m) => m.nodeId) };
 
     const fused = fuseRankings([metadataList, graphList, bm25List, vectorList]);
-    return this.toResults(fused, topK, metadataMatches);
+    return {
+      results: this.toResults(fused, topK, metadataMatches),
+      retrieval: {
+        metadata: metadataList.nodeIds,
+        graph: graphList.nodeIds,
+        bm25: bm25List.nodeIds,
+        vector: vectorList.nodeIds,
+      },
+    };
   }
 
   private computeRankedLists(query: string, options: RetrieveOptions): RankedLists {
@@ -159,6 +190,7 @@ export class Retriever {
             nodeId: result.nodeId,
             score: result.score,
             reasons: result.contributions.map((c) => this.describeContribution(c, result.nodeId, metadataMatches)),
+            engines: result.contributions.map((c) => c.engine),
           },
         };
       })

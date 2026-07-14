@@ -49,7 +49,7 @@ describe('Retriever.retrieveHybrid', () => {
     const retriever = new Retriever(graph);
     const vectorSearcher = fakeVectorSearcher([{ nodeId: 'kafka-alternative', score: 0.95 }]);
 
-    const results = await retriever.retrieveHybrid('do you know about async decoupled queues', fakeEmbedder, vectorSearcher);
+    const { results } = await retriever.retrieveHybrid('do you know about async decoupled queues', fakeEmbedder, vectorSearcher);
 
     expect(results.map((r) => r.node.id)).toContain('kafka-alternative');
     expect(results[0]!.explanation.reasons.some((r) => r.includes('semantic'))).toBe(true);
@@ -59,7 +59,7 @@ describe('Retriever.retrieveHybrid', () => {
     const retriever = new Retriever(graph);
     const vectorSearcher = fakeVectorSearcher([{ nodeId: 'unrelated', score: 0.99 }]);
 
-    const results = await retriever.retrieveHybrid('RabbitMQ', fakeEmbedder, vectorSearcher);
+    const { results } = await retriever.retrieveHybrid('RabbitMQ', fakeEmbedder, vectorSearcher);
 
     expect(results[0]!.node.id).toBe('rabbitmq');
   });

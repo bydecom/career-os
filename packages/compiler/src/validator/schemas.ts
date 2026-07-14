@@ -67,6 +67,17 @@ export const AchievementMetadataSchema = BaseMetadataSchema.extend({
   evidence: z.array(z.string()).optional().default([]),
 });
 
+/** Profile is a presentation node (resume header). May merge into Person in v2. */
+export const ProfileMetadataSchema = BaseMetadataSchema.extend({
+  headline: z.string().optional(),
+  location: z.string().optional(),
+  email: z.union([z.string().email(), z.literal('')]).optional(),
+  github: z.string().optional(),
+  linkedin: z.string().optional(),
+  website: z.string().optional(),
+  summary: z.string().optional(),
+});
+
 // ---------------------------------------------------------------------------
 // Schema Registry — maps NodeType → Zod Schema
 // ---------------------------------------------------------------------------
@@ -78,6 +89,7 @@ export const schemaRegistry: Partial<Record<NodeType, z.ZodObject<any>>> = {
   [NodeType.Concept]:      ConceptMetadataSchema,
   [NodeType.Company]:      CompanyMetadataSchema,
   [NodeType.Achievement]:  AchievementMetadataSchema,
+  [NodeType.Profile]:      ProfileMetadataSchema,
 };
 
 /**

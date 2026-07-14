@@ -1,0 +1,27 @@
+{
+  "name": "@career-os/resume",
+  "version": "1.0.0",
+  "description": "Resume projection — Graph → ResumeIR → Markdown. Deterministic; no Retriever/LLM.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@career-os/ontology": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.11",
+    "typescript": "^5.5.4",
+    "vitest": "^4.1.10"
+  }
+}

@@ -75,8 +75,8 @@ let totalRecall = 0;
 
 for (const testCase of cases) {
   const results = useVector
-    ? await retriever.retrieveHybrid(testCase.query, embedder, vectorIndex, { topK: K })
-    : retriever.retrieve(testCase.query, { topK: K });
+    ? (await retriever.retrieveHybrid(testCase.query, embedder, vectorIndex, { topK: K })).results
+    : retriever.retrieve(testCase.query, { topK: K }).results;
   const retrievedIds = results.map((r) => r.node.id);
   const relevantSet = new Set(testCase.relevantNodeIds);
 

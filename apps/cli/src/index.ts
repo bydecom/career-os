@@ -2,17 +2,24 @@
 /**
  * CareerOS CLI
  * Usage:
- *   node apps/cli/src/index.js compile [--source <dir>] [--output <dir>] [--verbose]
- *   node apps/cli/src/index.js validate [--source <dir>]
+ *   career compile | validate | query | ask | …
+ *
+ * TODO(#6): CLI currently orchestrates retrieve → ConversationIR → verbalize
+ * inline in runAsk(). Acceptable for v1. Extract shared runtime orchestration
+ * when career resume / career portfolio need the same pipeline.
  */
 
 import { resolve } from 'path';
 import { fileURLToPath } from 'url';
-import { existsSync } from 'fs';
+import { appendFileSync, existsSync, mkdirSync, writeFileSync } from 'fs';
 import { compile } from '@career-os/compiler';
 import { loadGraph, Retriever, QdrantVectorIndex } from '@career-os/retriever';
+import type { KnowledgeGraph } from '@career-os/ontology';
 import { GeminiEmbedder } from '@career-os/embedding';
 import { GraphStore } from '@career-os/graph-store';
+import { applyBudget, buildConversationIR, promptRenderer } from '@career-os/conversation';
+import { createProvider, verbalize } from '@career-os/llm';
+import { projectResume, renderMarkdown, formatDiagnostics } from '@career-os/resume';
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url));
 const ROOT = resolve(__dirname, '../../..');
@@ -20,7 +27,49 @@ const ROOT = resolve(__dirname, '../../..');
 try {
   process.loadEnvFile(resolve(ROOT, '.env'));
 } catch {
-  // .env is optional — only required for `career query --vector`.
+  // .env is optional — required for `career ask` and `career query --vector`.
+}
+
+function parseQuestionArgs(): { query: string; useVector: boolean; topK: number } {
+  const knownFlags = new Set(['--source', '--output', '--topk']);
+  const useVector = args.includes('--vector');
+  const queryTokens: string[] = [];
+  for (let i = 1; i < args.length; i++) {
+    const token = args[i]!;
+    if (token.startsWith('--') || token === '-v') {
+      if (knownFlags.has(token)) i++;
+      continue;
+    }
+    queryTokens.push(token);
+  }
+  return {
+    query: queryTokens.join(' '),
+    useVector,
+    topK: Number(getArg('--topk', '10')),
+  };
+}
+
+function loadCompiledGraph(): KnowledgeGraph {
+  const dbPath = resolve(outputDir, 'graph.db');
+  const graphJsonPath = resolve(outputDir, 'graph.json');
+  try {
+    if (existsSync(dbPath)) {
+      const store = new GraphStore(dbPath);
+      const graph = store.readAll();
+      store.close();
+      return graph;
+    }
+    return loadGraph(graphJsonPath);
+  } catch {
+    console.error(`Could not read the compiled graph from ${outputDir}. Run "career compile" first.`);
+    process.exit(1);
+    throw new Error('unreachable');
+  }
+}
+
+function appendJsonl(fileName: string, record: Record<string, unknown>): void {
+  mkdirSync(outputDir, { recursive: true });
+  appendFileSync(resolve(outputDir, fileName), `${JSON.stringify(record)}\n`, 'utf-8');
 }
 
 // ---------------------------------------------------------------------------
@@ -119,42 +168,13 @@ async function runValidate() {
 }
 
 async function runQuery() {
-  const knownFlags = new Set(['--source', '--output', '--topk']);
-  const useVector = args.includes('--vector');
-  const queryTokens: string[] = [];
-  for (let i = 1; i < args.length; i++) {
-    const token = args[i]!;
-    if (token.startsWith('--') || token === '-v') {
-      if (knownFlags.has(token)) i++; // skip this flag's value too
-      continue;
-    }
-    queryTokens.push(token);
-  }
-  const query = queryTokens.join(' ');
+  const { query, useVector, topK } = parseQuestionArgs();
   if (!query) {
     console.error('Usage: career query "<your question>" [--topk <n>] [--vector]');
     process.exit(1);
   }
 
-  const topK = Number(getArg('--topk', '10'));
-  const dbPath = resolve(outputDir, 'graph.db');
-  const graphJsonPath = resolve(outputDir, 'graph.json');
-
-  let graph;
-  try {
-    if (existsSync(dbPath)) {
-      const store = new GraphStore(dbPath);
-      graph = store.readAll();
-      store.close();
-    } else {
-      graph = loadGraph(graphJsonPath);
-    }
-  } catch {
-    console.error(`Could not read the compiled graph from ${outputDir}. Run "career compile" first.`);
-    process.exit(1);
-    return;
-  }
-
+  const graph = loadCompiledGraph();
   const retriever = new Retriever(graph);
 
   let results;
@@ -172,9 +192,9 @@ async function runQuery() {
       collection: 'career-nodes',
       vectorSize: 768,
     });
-    results = await retriever.retrieveHybrid(query, embedder, vectorIndex, { topK });
+    results = (await retriever.retrieveHybrid(query, embedder, vectorIndex, { topK })).results;
   } else {
-    results = retriever.retrieve(query, { topK });
+    results = retriever.retrieve(query, { topK }).results;
   }
 
   console.log('');
@@ -195,6 +215,118 @@ async function runQuery() {
   console.log('');
 }
 
+async function runAsk() {
+  const { query, useVector, topK } = parseQuestionArgs();
+  if (!query) {
+    console.error('Usage: career ask "<your question>" [--topk <n>] [--vector]');
+    process.exit(1);
+  }
+
+  const { GEMINI_API_KEY } = process.env;
+  if (!GEMINI_API_KEY) {
+    console.error('career ask requires GEMINI_API_KEY in .env (see .env.example).');
+    process.exit(1);
+  }
+
+  const graph = loadCompiledGraph();
+  const retriever = new Retriever(graph);
+
+  const retrieveStarted = Date.now();
+  let outcome;
+  if (useVector) {
+    const { QDRANT_URL, QDRANT_API_KEY } = process.env;
+    if (!QDRANT_URL) {
+      console.error('--vector requires QDRANT_URL in .env (see .env.example).');
+      process.exit(1);
+      return;
+    }
+    const embedder = new GeminiEmbedder({ apiKey: GEMINI_API_KEY });
+    const vectorIndex = new QdrantVectorIndex({
+      url: QDRANT_URL,
+      apiKey: QDRANT_API_KEY || undefined,
+      collection: 'career-nodes',
+      vectorSize: 768,
+    });
+    outcome = await retriever.retrieveHybrid(query, embedder, vectorIndex, { topK });
+  } else {
+    outcome = retriever.retrieve(query, { topK });
+  }
+  const retrieveLatencyMs = Date.now() - retrieveStarted;
+
+  const ir = applyBudget(buildConversationIR(query, outcome.results, graph, { topK }), {
+    topK: Math.min(topK, 8),
+  });
+
+  appendJsonl('query-logs.jsonl', {
+    ts: new Date().toISOString(),
+    query,
+    retrieval: outcome.retrieval,
+    selectedNodeIds: ir.candidateNodes.map((n) => n.id),
+    confidence: ir.confidence,
+    latencyMs: retrieveLatencyMs,
+  });
+
+  console.log('');
+  console.log(promptRenderer.toReasoning(ir));
+  console.log('');
+  console.log('Answer');
+  console.log('──────');
+
+  const provider = createProvider({ provider: 'gemini', apiKey: GEMINI_API_KEY });
+  const llmStarted = Date.now();
+  process.stdout.write(''); // ensure Answer header flushed before stream
+  const verbalized = await verbalize(ir, provider, {
+    temperature: 0.2,
+    thinking: 'minimal',
+    stream: true,
+    onDelta: (text) => process.stdout.write(text),
+  });
+  const llmLatencyMs = Date.now() - llmStarted;
+
+  process.stdout.write('\n\n');
+
+  const promptMarkdown = promptRenderer.toMarkdown(ir);
+  appendJsonl('conversation-logs.jsonl', {
+    ts: new Date().toISOString(),
+    query,
+    contextSize: ir.tokenBudgetHint,
+    promptChars: promptMarkdown.length,
+    responseChars: verbalized.answer.length,
+    inputTokens: verbalized.usage?.inputTokens,
+    outputTokens: verbalized.usage?.outputTokens,
+    totalTokens: verbalized.usage?.totalTokens,
+    confidence: ir.confidence,
+    latencyMs: llmLatencyMs,
+    provider: verbalized.provider,
+    model: verbalized.model,
+  });
+}
+
+async function runResume() {
+  const graph = loadCompiledGraph();
+  let result;
+  try {
+    result = projectResume(graph, { scope: 'master' });
+  } catch (err) {
+    console.error(err instanceof Error ? err.message : err);
+    process.exit(1);
+    return;
+  }
+
+  const markdown = renderMarkdown(result.ir);
+  mkdirSync(outputDir, { recursive: true });
+  const outPath = resolve(outputDir, 'resume.md');
+  writeFileSync(outPath, markdown, 'utf-8');
+
+  console.log('');
+  console.log('CareerOS Resume — master projection');
+  console.log('────────────────────────────────────');
+  console.log(formatDiagnostics(result.diagnostics));
+  console.log('');
+  console.log(`Written: ${outPath}`);
+  console.log('');
+}
+
 // ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
@@ -208,6 +340,12 @@ switch (command) {
   case 'query':
     await runQuery();
     break;
+  case 'ask':
+    await runAsk();
+    break;
+  case 'resume':
+    await runResume();
+    break;
   default:
     console.log(`
 CareerOS CLI
@@ -215,13 +353,16 @@ CareerOS CLI
 Commands:
   compile   Compile knowledge nodes → Knowledge Graph
   validate  Validate knowledge nodes without writing output
-  query     Run a Hybrid Retrieval query against the compiled graph
+  query     Developer command — Hybrid Retrieval debug (no LLM)
+  ask       User-facing — retrieve → ConversationIR → LLM verbalize
+  resume    Master resume projection → Markdown (no Retriever / LLM)
 
 Options:
   --source <dir>   Source directory (default: career-data/nodes)
   --output <dir>   Output directory (default: career-data/generated)
-  --topk <n>       Max results for "query" (default: 10)
+  --topk <n>       Max retrieval results (default: 10)
   --vector         Include Vector Search (requires Qdrant + GEMINI_API_KEY)
   --verbose, -v    Print all diagnostics including info-level
     `);
 }
+
