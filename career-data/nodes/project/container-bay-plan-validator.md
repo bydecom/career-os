@@ -9,6 +9,7 @@ tags:
   - data-processing
 status: active
 role: "Python Developer"
+company: freelance
 period: "Sep/2025 - Dec/2025"
 visibility: private
 created: "2025-09-01"

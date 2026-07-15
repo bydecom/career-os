@@ -35,6 +35,7 @@ const directories = [
   'career-data/nodes/experience',
   'career-data/nodes/company',
   'career-data/nodes/profile',
+  'career-data/nodes/course',
   'career-data/nodes/decision',
   'career-data/nodes/achievement',
   'career-data/nodes/concept',

@@ -315,15 +315,18 @@ async function runResume() {
 
   const markdown = renderMarkdown(result.ir);
   mkdirSync(outputDir, { recursive: true });
-  const outPath = resolve(outputDir, 'resume.md');
-  writeFileSync(outPath, markdown, 'utf-8');
+  const mdPath = resolve(outputDir, 'resume.md');
+  const irPath = resolve(outputDir, 'resume.ir.json');
+  writeFileSync(mdPath, markdown, 'utf-8');
+  writeFileSync(irPath, `${JSON.stringify(result.ir, null, 2)}\n`, 'utf-8');
 
   console.log('');
   console.log('CareerOS Resume — master projection');
   console.log('────────────────────────────────────');
   console.log(formatDiagnostics(result.diagnostics));
   console.log('');
-  console.log(`Written: ${outPath}`);
+  console.log(`Written: ${mdPath}`);
+  console.log(`         ${irPath}`);
   console.log('');
 }
 

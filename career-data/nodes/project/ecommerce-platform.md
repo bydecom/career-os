@@ -16,6 +16,7 @@ status: active
 role: "Full-stack Developer"
 company: fpt-software
 period: "Mar/2026 - Jun/2026"
+demo: "https://d7ozoo9vtkn42.cloudfront.net/"
 visibility: private
 created: "2026-06-01"
 updated: "2026-07-10"

@@ -8,6 +8,7 @@ tags:
   - event-driven
 status: active
 role: "Game Engineer"
+company: freelance
 period: "Jun/2025 - Sep/2025"
 visibility: private
 created: "2025-06-01"

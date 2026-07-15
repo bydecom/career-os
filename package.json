@@ -25,6 +25,8 @@
     "query": "node apps/cli/dist/index.js query",
     "ask": "node apps/cli/dist/index.js ask",
     "resume": "node apps/cli/dist/index.js resume",
+    "web": "npm run dev --workspace=@career-os/web",
+    "web:build": "npm run build --workspace=@career-os/web",
     "index:embeddings": "node scripts/index-embeddings.mjs",
     "qdrant:up": "docker compose up -d qdrant",
     "qdrant:down": "docker compose down",

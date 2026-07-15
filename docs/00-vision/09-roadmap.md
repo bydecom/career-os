@@ -75,10 +75,13 @@ See [99-v1-definition.md](./99-v1-definition.md). A stranger clones the repo and
 ## Phase 4: Knowledge Interfaces (Views) — v1.0 focus
 *Goal: User-facing projections — ask, export, browse.*  
 **DoD:** `career resume` + portfolio surface meet [v1.0 Definition](./99-v1-definition.md); facts 100% from graph.
-- [x] Master Markdown resume (`career resume` → ResumeIR → `resume.md`) — **v1.0.0**
+- [x] Master Markdown resume (`career resume` → ResumeIR → `resume.md` + `resume.ir.json`) — **v1.0.0**
+- [x] Monorepo `apps/web` scaffold (Next.js viewer over ResumeIR) — see [09-monorepo-web.md](../02-architecture/09-monorepo-web.md)
+- [x] FE Knowledge Platform architecture + sitemap noted — [10-frontend-knowledge-platform.md](../02-architecture/10-frontend-knowledge-platform.md)
+- [x] FE Design System + layout lock — [11-frontend-design-system.md](../02-architecture/11-frontend-design-system.md) (Sprint 0 kit → Landing → …)
 - [ ] Resume HTML / PDF renderers (`--html` / `--pdf`) — v1.0.1+
 - [ ] Tailored resume (`--jd`) — v1.1 (may use Retriever; master never does)
-- [ ] Portfolio surface (deployable web or static export) — **v1.0**
+- [ ] Portfolio surface (`career portfolio` → PortfolioIR + web Phase 1 pages) — **v1.0**
 - [ ] Interactive Graph Explorer View — nice-to-have after resume/portfolio
 - [ ] MCP Server — **frozen for v1.0** (protocol adapter over Skills later; see Capability Map)
 
