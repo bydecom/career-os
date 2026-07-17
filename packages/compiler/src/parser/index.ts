@@ -115,9 +115,15 @@ function extractWikiLinks(rawBody: string, sections: Section[]): WikiLink[] {
   for (const line of lines) {
     WIKI_LINK_REGEX.lastIndex = 0;
     while ((match = WIKI_LINK_REGEX.exec(line)) !== null) {
+      // Obsidian-style media embeds: ![[file.png]] / ![[demo.mp4|caption=...]]
+      // These are not knowledge-graph wiki-links — skip until media grammar lands.
+      const isEmbed = match.index > 0 && line[match.index - 1] === '!';
       const inner = match[1] ?? '';
       const pipeIdx = inner.indexOf('|');
-      const target = pipeIdx >= 0 ? inner.slice(0, pipeIdx) : inner;
+      const target = (pipeIdx >= 0 ? inner.slice(0, pipeIdx) : inner).trim();
+      const isMediaFile = /\.(png|jpe?g|gif|webp|svg|mp4|webm|mov|pdf)$/i.test(target);
+      if (isEmbed || isMediaFile) continue;
+
       const displayText = pipeIdx >= 0 ? inner.slice(pipeIdx + 1) : undefined;
       const canonicalTarget = target.toLowerCase().replace(/\s+/g, '-');
       const section = lineToSection[lineIndex] ?? 'body';

@@ -26,6 +26,12 @@ LLMs **out** of the extraction path — the model never invents a medical
 statement; it only ever receives sentences that already exist verbatim in
 the source label.
 
+## Demo
+
+![[cover.png|caption=Medical Citation Agent]]
+
+![[demo.mp4|caption=Claim + line-level citation|poster=poster.png]]
+
 ## Problem
 
 LLM assistants answering medical questions frequently hallucinate —

@@ -23,6 +23,12 @@ for maritime logistics operations — verifying that a proposed container
 stowage plan doesn't violate physical stability or structural rules before
 it's executed at a port.
 
+## Demo
+
+![[cover.png|caption=Container Bay Plan Validator]]
+
+![[demo.mp4|caption=Bay plan validation|poster=poster.png]]
+
 ## Problem
 
 Bay plans arrive as unstructured 6-digit LOC telemetry in Excel/PDF exports,

@@ -35,12 +35,12 @@ export interface RetrieveResult {
   explanation: RetrievalExplanation;
 }
 
-/** Per-engine node ID lists before fusion — used by query logs and ConversationIR. */
+/** Per-engine raw matches before fusion — used by query logs, ConversationIR, and the Runtime Trace UI. */
 export interface RetrievalBreakdown {
-  metadata: string[];
-  graph: string[];
-  bm25: string[];
-  vector: string[];
+  metadata: MetadataMatch[];
+  graph: { nodeId: string; score: number }[];
+  bm25: { nodeId: string; score: number }[];
+  vector: { nodeId: string; score: number }[];
 }
 
 export interface RetrieveOutcome {
@@ -78,7 +78,9 @@ interface RankedLists {
   metadataMatches: MetadataMatch[];
   metadataList: RankedList;
   graphList: RankedList;
+  graphScored: { nodeId: string; score: number }[];
   bm25List: RankedList;
+  bm25Scored: { nodeId: string; score: number }[];
 }
 
 export class Retriever {
@@ -97,15 +99,16 @@ export class Retriever {
   /** Deterministic path only: Metadata Lookup + Graph PPR + BM25. No network calls. */
   retrieve(query: string, options: RetrieveOptions = {}): RetrieveOutcome {
     const { topK } = { ...DEFAULTS, ...options };
-    const { metadataMatches, metadataList, graphList, bm25List } = this.computeRankedLists(query, options);
+    const { metadataMatches, metadataList, graphList, graphScored, bm25List, bm25Scored } =
+      this.computeRankedLists(query, options);
 
     const fused = fuseRankings([metadataList, graphList, bm25List]);
     return {
       results: this.toResults(fused, topK, metadataMatches),
       retrieval: {
-        metadata: metadataList.nodeIds,
-        graph: graphList.nodeIds,
-        bm25: bm25List.nodeIds,
+        metadata: metadataMatches,
+        graph: graphScored,
+        bm25: bm25Scored,
         vector: [],
       },
     };
@@ -126,7 +129,8 @@ export class Retriever {
     options: HybridRetrieveOptions = {}
   ): Promise<RetrieveOutcome> {
     const { topK, vectorTopK = 20 } = { ...DEFAULTS, ...options };
-    const { metadataMatches, metadataList, graphList, bm25List } = this.computeRankedLists(query, options);
+    const { metadataMatches, metadataList, graphList, graphScored, bm25List, bm25Scored } =
+      this.computeRankedLists(query, options);
 
     const queryVector = await embedder.embed(query);
     const vectorMatches = await vectorSearcher.search(queryVector, vectorTopK);
@@ -136,10 +140,10 @@ export class Retriever {
     return {
       results: this.toResults(fused, topK, metadataMatches),
       retrieval: {
-        metadata: metadataList.nodeIds,
-        graph: graphList.nodeIds,
-        bm25: bm25List.nodeIds,
-        vector: vectorList.nodeIds,
+        metadata: metadataMatches,
+        graph: graphScored,
+        bm25: bm25Scored,
+        vector: vectorMatches,
       },
     };
   }
@@ -153,25 +157,26 @@ export class Retriever {
 
     // Step 2: Graph PPR, seeded from the metadata anchors (if any).
     let graphList: RankedList = { engine: 'graph', nodeIds: [] };
+    let graphScored: { nodeId: string; score: number }[] = [];
     if (metadataMatches.length > 0) {
       const { scores } = personalizedPageRank(
         this.adjacency,
         metadataMatches.map((m) => m.nodeId),
         { direction: 'bidirectional' }
       );
-      const ranked = Array.from(scores.entries())
+      graphScored = Array.from(scores.entries())
         .filter(([nodeId]) => !metadataMatches.some((m) => m.nodeId === nodeId)) // graph rank is for *expansion*, not re-ranking the anchor itself
         .sort((a, b) => b[1] - a[1])
         .slice(0, graphTopK)
-        .map(([nodeId]) => nodeId);
-      graphList = { engine: 'graph', nodeIds: ranked };
+        .map(([nodeId, score]) => ({ nodeId, score }));
+      graphList = { engine: 'graph', nodeIds: graphScored.map((g) => g.nodeId) };
     }
 
     // Step 3: BM25 lexical search (always runs, catches niche keywords).
     const bm25Matches = this.bm25Index.search(query, bm25TopK);
     const bm25List: RankedList = { engine: 'bm25', nodeIds: bm25Matches.map((m) => m.nodeId) };
 
-    return { metadataMatches, metadataList, graphList, bm25List };
+    return { metadataMatches, metadataList, graphList, graphScored, bm25List, bm25Scored: bm25Matches };
   }
 
   private toResults(

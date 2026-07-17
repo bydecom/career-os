@@ -191,9 +191,79 @@ If you are an AI agent (Cursor, Claude, Gemini, ChatGPT) tasked with working on 
 # Verify project structure
 npm run check-structure
 
-# Regenerate missing directories
-npm run bootstrap
+# Install workspace deps (from repo root)
+npm install
+
+# Build packages the CLI / web depend on
+npm run build
 ```
+
+### Compiler + ResumeIR (required for Portfolio / Resume pages)
+
+```bash
+npm run compile          # career-data/nodes → graph.json + graph.db
+npm run resume           # → resume.ir.json + resume.md
+```
+
+### Run the web app
+
+```bash
+npm run web              # Next.js at http://localhost:3000
+```
+
+Surfaces:
+
+| Route | What it shows |
+|-------|----------------|
+| `/` | Landing (Hero → Pipeline → Architecture → Featured) |
+| `/portfolio` | Featured capabilities + all projects from ResumeIR |
+| `/project/[id]` | Project detail (problem → architecture → evidence) |
+| `/resume` | Resume projection (+ print PDF, `/resume/ir`, `/resume/markdown`) |
+| `/interview` | Interview AI — Chat + AI Inspector (glass-box) |
+
+### Interview AI (optional but recommended)
+
+Needs Gemini + local Qdrant for hybrid retrieval (`--vector` path):
+
+```bash
+# 1. Env (repo root)
+cp .env.example .env
+# Edit .env → set GEMINI_API_KEY=
+# QDRANT_URL=http://localhost:6333  (already in example)
+
+# 2. Start Qdrant (Docker Desktop must be running)
+npm run qdrant:up
+
+# 3. Index node embeddings into Qdrant
+npm run compile
+node scripts/index-embeddings.mjs
+# or: npm run index:embeddings
+
+# 4. Web + open Interview
+npm run web
+# → http://localhost:3000/interview
+```
+
+CLI smoke test (same pipeline as the web API):
+
+```bash
+npm run ask -- "Tell me about GraphRAG" --vector
+```
+
+Without Qdrant, `/api/ask` still runs BM25 + graph retrieval (no vectors). With Qdrant + embeddings, answers use hybrid retrieve → ConversationIR → Gemini verbalize.
+
+### Useful scripts
+
+| Script | Purpose |
+|--------|---------|
+| `npm run web` | Dev server for `apps/web` |
+| `npm run compile` | Compile knowledge → graph |
+| `npm run resume` | Project master ResumeIR |
+| `npm run qdrant:up` / `qdrant:down` | Local Qdrant via Docker Compose |
+| `npm run index:embeddings` | Embed graph nodes → Qdrant collection `career-nodes` |
+| `npm run ask -- "…" --vector` | CLI Interview path |
+
+Hire-demo deploy notes → [`journal/engineering/2026/07/hire-demo-deploy-and-review.md`](journal/engineering/2026/07/hire-demo-deploy-and-review.md)
 
 ---
 

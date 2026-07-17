@@ -83,7 +83,7 @@ describe('Retriever.retrieve', () => {
   it('exposes a per-engine retrieval breakdown for query logs', () => {
     const { retrieval } = retriever.retrieve('RabbitMQ');
 
-    expect(retrieval.metadata).toContain('rabbitmq');
+    expect(retrieval.metadata.some((m) => m.matchedTerm === 'rabbitmq')).toBe(true);
     expect(retrieval.bm25.length).toBeGreaterThan(0);
   });
 

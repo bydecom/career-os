@@ -37,6 +37,12 @@ focus was production-shaped concerns: money paths (payment), stock races
 > inventory, auth, and async workers — and documented every production
 > punch."
 
+## Demo
+
+![[cover.png|caption=E-Commerce Platform]]
+
+![[demo.mp4|caption=Storefront + admin walkthrough|poster=poster.png]]
+
 ## Chosen Solution
 
 - Backend: [[nodejs]] 20, Express 5, [[typescript]], [[prisma]], [[redis]], JWT, Zod

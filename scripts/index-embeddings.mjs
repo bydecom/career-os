@@ -25,7 +25,7 @@ if (!QDRANT_URL) throw new Error('QDRANT_URL is not set (see .env.example).');
 if (!GEMINI_API_KEY) throw new Error('GEMINI_API_KEY is not set (see .env.example).');
 
 const COLLECTION = 'career-nodes';
-const VECTOR_SIZE = 768; // text-embedding-004
+const VECTOR_SIZE = 768; // gemini-embedding-2 (Matryoshka truncated)
 
 const graph = loadGraph(resolve(ROOT, 'career-data/generated/graph.json'));
 const embedder = new GeminiEmbedder({ apiKey: GEMINI_API_KEY });

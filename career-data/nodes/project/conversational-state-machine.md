@@ -13,54 +13,115 @@ role: "Author / Solo Developer"
 period: "Jun/2026"
 visibility: public
 created: "2026-06-01"
-updated: "2026-07-13"
+updated: "2026-07-16"
 ---
 
 ## Overview
 
-Enterprise dialog-management patterns reverse-engineered from proprietary
-platforms (e.g. Kore.ai) and rebuilt on an LLM-native stack, focused on one
-hard problem: how a chatbot should behave when a user interrupts one task to
-ask about another, then wants to come back.
+A **Dialogue Runtime Engine** — not a chatbot skin. Enterprise interruption
+patterns (hold / finish / lock / discard) rebuilt on an LLM-native stack,
+with a single serializable `ContextObject` as the source of truth for every
+turn. Flows are data in SQLite; Gemini only fills slots under catalog enums.
+
+Repository: [github.com/bydecom/conversational-state-machine](https://github.com/bydecom/conversational-state-machine)
 
 ## Problem
 
-Multi-turn chatbots break down at task-switching: a user booking a flight
-suddenly asks "what's my order status?" — should the bot hold the flight
-context and resume it after, finish the current task first, lock it and
-refuse the interruption, or discard it and switch entirely? Enterprise
-platforms solve this with proprietary context-stack logic that isn't openly
-documented; naive LLM chatbots usually just lose the original context.
+Multi-turn bots collapse when users interrupt: booking a ticket, then
+ordering food, then wanting to resume. Naive LLM chat loses the original
+task. Enterprise platforms hide the stack logic behind proprietary config.
+The hard question is not “which model?” — it is how the runtime should
+behave under interruption.
 
-## Chosen Solution
+## Demo
 
-- Deep-dive technical audit of the proprietary context-switching
-  architecture of enterprise platforms (Kore.ai-style), then abstracted
-  the pattern into an open, LLM-native implementation
-- Modeled four interruption policies — `hold_and_resume`,
-  `finish_then_switch`, `lock_current`, `switch_and_discard` — as
-  deterministic LIFO stack operations on a single serializable
-  `ContextObject`
-- Slot-first detection pipeline using strict catalog enum constraints,
-  enforcing deterministic structured output from the LLM to eliminate
-  entity hallucination during cross-task switches
-- Stack: [[nodejs]], Express, [[typescript]], [[prisma]], [[sqlite]], [[gemini-ai]], Svelte 5
+![[cover.png|caption=Conversational State Machine]]
 
-## Key Decisions
+![[demo.mp4|caption=Booking → Order Food → Resume|poster=poster.png]]
 
-- **Interruption policy as a stack operation, not ad-hoc state flags** —
-  representing `hold_and_resume` / `lock_current` / etc. as push/pop
-  operations on a single serializable context object made the four
-  policies composable and testable in isolation, instead of a growing pile
-  of conditional branches per policy.
-- **Slot-first detection with enum constraints, not free-text extraction**
-  — constraining what the LLM can output to a known catalog at the
-  detection step removes an entire class of "the model invented an entity
-  that doesn't exist in our system" bugs during a task switch.
+Drop files into `career-data/assets/conversational-state-machine/`
+(`cover.png`, `poster.png`, `demo.mp4`). See that folder’s README.
+
+## Runtime Pipeline
+
+1. Slot-first detection (catalog / quick-reply match stays in current flow)
+2. Regex pattern match (deterministic triggers from DB)
+3. Gemini structured output (schema built from DB + catalog enums)
+4. Entity validation against catalog
+5. Context-switch policy (hold / finish / lock / discard)
+6. Context stack push/pop (LIFO `onHoldTasks`)
+7. Advance to next missing slot or confirm / resume
+
+## Core Capabilities
+
+### Dialogue Runtime
+
+Message → NLU → policy → stack → resume. One pipeline owns the turn; the LLM
+does not own the control plane.
+
+### Serializable ContextObject
+
+Every session is one JSON-serializable snapshot (`intent`, `entities`,
+`onHoldTasks`, tags, confirm flags). Any turn can be replayed or debugged
+from the object alone — no hidden runtime memory.
+
+### Dynamic Schema Builder
+
+`schema.builder.ts` builds Gemini response schemas from Prisma intents +
+catalog enums. The model cannot invent a movie or menu item that is not in
+the DB.
+
+### Interruption Policy Engine
+
+Four policies as stack operations: `hold_and_resume`, `finish_then_switch`,
+`lock_current`, `switch_and_discard`. Configurable per-flow or globally.
+
+### Flows as data
+
+Intent definitions, slots, prompts, and switch policies live in SQLite. The
+Flow Editor writes the DB; the state machine reads it. No redeploy to change
+a flow.
+
+### Slot-first routing
+
+Before considering a context switch, the pipeline checks catalog / quick
+reply for the current slot. Button clicks do not break the flow via NLU
+hallucination.
+
+## Engineering Decisions
+
+- **Interruption as stack push/pop** — four policies stay composable and
+  unit-testable instead of flag soup per policy.
+- **Structured output over prompt engineering** — schema from DB constrains
+  intent and entity values at detection time.
+- **One hold queue** — `onHoldTasks` is the only lane; LIFO encodes resume
+  order without a separate pending-intent field.
+- **Slot-first before switch** — catalog match keeps the user in the current
+  task when they click a quick reply.
+
+## Tradeoffs
+
+- Deterministic dialogue control vs fully free-form agent loops — owned the
+  control plane; less “agent freedom,” fewer silent task losses.
+- Four explicit policies vs infinite custom rules — coverage without
+  combinatorial explosion.
+- In-memory sessions — restart clears state (design for demo / local runtime;
+  persistence deferred).
+
+## Evidence
+
+- Implementation: `context.service.ts` (~994 LOC), `schema.builder.ts`,
+  `state.machine.ts`, `context-switch.policy.ts`, `catalog.service.ts`
+- Validation: Vitest 10/10 passing (`context.service.test.ts`,
+  `context-switch.policy.test.ts`)
+- Measurement: 4 interruption policies · LIFO stack · enum-constrained slots
+- Docs: `docs/IMPLEMENTATION.md` in the project repo
+- Stack: [[nodejs]], Express, [[typescript]], [[prisma]], [[sqlite]],
+  [[gemini-ai]], Svelte 5
 
 ## Lessons Learned
 
-- Dialog interruption is fundamentally a stack problem (LIFO push/pop of
-  context), not a flags-and-conditionals problem — modeling it that way
-  from the start avoided combinatorial state explosion across the four
-  policies.
+- Dialog interruption is a stack problem, not a flags-and-conditionals
+  problem.
+- Constrain what the LLM may emit at detection time — fewer invented
+  entities later.

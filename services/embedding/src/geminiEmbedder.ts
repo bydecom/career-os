@@ -4,18 +4,23 @@
 // service's runtime dependency count at zero (matches @career-os/ontology's
 // "zero runtime dependencies" philosophy).
 //
-// Model: text-embedding-004 (768-dim), Google's standard text embedding model.
-// Docs: https://ai.google.dev/api/embeddings
+// Model: gemini-embedding-2 (current Gemini Embedding; Matryoshka truncated to
+// 768-dim here to match QdrantVectorIndex.vectorSize across this monorepo).
+// Kept as plain fetch — no @google/genai SDK (zero runtime deps).
+// Docs: https://ai.google.dev/gemini-api/docs/embeddings
 // ---------------------------------------------------------------------------
 
 const API_BASE = 'https://generativelanguage.googleapis.com/v1beta';
-const DEFAULT_MODEL = 'text-embedding-004';
+const DEFAULT_MODEL = 'gemini-embedding-2';
+const DEFAULT_OUTPUT_DIMENSIONALITY = 768;
 
 export interface GeminiEmbedderOptions {
   apiKey: string;
   model?: string;
   /** Max texts per batchEmbedContents call. Gemini's API caps this at 100. */
   batchSize?: number;
+  /** Matryoshka truncation — must match QdrantVectorIndex.vectorSize. Default 768. */
+  outputDimensionality?: number;
 }
 
 export interface EmbeddingResult {
@@ -28,6 +33,7 @@ export class GeminiEmbedder {
   private readonly apiKey: string;
   private readonly model: string;
   private readonly batchSize: number;
+  private readonly outputDimensionality: number;
 
   constructor(options: GeminiEmbedderOptions) {
     if (!options.apiKey) {
@@ -36,6 +42,7 @@ export class GeminiEmbedder {
     this.apiKey = options.apiKey;
     this.model = options.model ?? DEFAULT_MODEL;
     this.batchSize = options.batchSize ?? 100;
+    this.outputDimensionality = options.outputDimensionality ?? DEFAULT_OUTPUT_DIMENSIONALITY;
   }
 
   async embed(text: string): Promise<number[]> {
@@ -57,6 +64,7 @@ export class GeminiEmbedder {
           requests: chunk.map((text) => ({
             model: `models/${this.model}`,
             content: { parts: [{ text }] },
+            outputDimensionality: this.outputDimensionality,
           })),
         }),
       });

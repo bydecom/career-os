@@ -25,6 +25,12 @@ costs by ~90% on structural code queries (e.g. "what breaks if I change
 this function?"), by answering them from a pre-built graph instead of
 having an LLM read and re-reason over source files every time.
 
+## Demo
+
+![[cover.png|caption=GraphRAG-Code]]
+
+![[demo.mp4|caption=Structural query without re-reading the repo|poster=poster.png]]
+
 ## Problem
 
 Asking an LLM "what depends on this function?" or "what's the blast radius

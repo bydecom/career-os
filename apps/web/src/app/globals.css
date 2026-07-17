@@ -31,3 +31,21 @@ body {
 ::selection {
   background: rgba(16, 185, 129, 0.35);
 }
+
+/* Linear-like Resume PDF via browser print */
+@media print {
+  body {
+    background: #fff !important;
+    color: #18181b !important;
+  }
+
+  a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+}

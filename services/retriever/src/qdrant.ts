@@ -10,7 +10,7 @@ export interface QdrantVectorIndexOptions {
   url: string;
   apiKey?: string;
   collection: string;
-  /** Dimensionality of the vectors (768 for Gemini text-embedding-004). */
+  /** Dimensionality of the vectors (768 for gemini-embedding-2 Matryoshka). */
   vectorSize: number;
 }
 

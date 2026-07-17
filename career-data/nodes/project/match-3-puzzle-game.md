@@ -20,6 +20,12 @@ updated: "2026-07-13"
 A Match-3 puzzle game prototype built from provided visual concepts for an
 academic product, using [[phaser]] on the web.
 
+## Demo
+
+![[cover.png|caption=Match-3 Puzzle Game]]
+
+![[demo.mp4|caption=Gameplay|poster=poster.png]]
+
 ## Problem
 
 Match-3 games need many levels with varying boards, obstacles, and win

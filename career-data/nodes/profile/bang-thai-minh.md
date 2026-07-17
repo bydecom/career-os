@@ -6,24 +6,24 @@ schemaVersion: "1"
 tags:
   - profile
 status: active
-headline: "Software Developer"
+headline: "Knowledge Systems Engineer"
 location: "Ho Chi Minh City, Vietnam"
 email: "thaibang4903@gmail.com"
 github: "https://github.com/bydecom"
 linkedin: "https://www.linkedin.com/in/minh-bang-thai-742013378/"
 website: "https://d7ozoo9vtkn42.cloudfront.net/"
 created: "2026-07-14"
-updated: "2026-07-14"
+updated: "2026-07-16"
 ---
 
 ## Summary
 
-Software Developer with hands-on experience building production-grade systems and
-deterministic AI pipelines. Strong foundation in Node.js, Express, and Python, with
-practical depth in system architecture, async queues, distributed locking, and LLM
-integration. Experienced in translating complex requirements into maintainable,
-fail-safe solutions. Applies first-principles thinking to diagnose root causes and
-design resilient architectures.
+Build deterministic knowledge systems. Compile career knowledge into structured,
+reusable IR — then project Resume, Portfolio, and Interview surfaces from one graph.
+
+Interested in Knowledge Graphs, LLM runtime control planes, conversation management,
+compiler architecture, and evidence-first AI — systems where retrieval and structure
+come before generation.
 
 ## Specialties
 

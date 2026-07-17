@@ -22,6 +22,12 @@ Contributed to a [[django]]-based movie theater web application built at
 [[fpt-software]], developing custom backend modules and
 performance-critical search/caching features, plus the [[react]] frontend.
 
+## Demo
+
+![[cover.png|caption=Movie Theater Management System]]
+
+![[demo.mp4|caption=Search + booking flow|poster=poster.png]]
+
 ## Chosen Solution
 
 - Backend: [[django]], [[postgresql]] (`pg_trgm` trigram search + GIN indexes), [[redis]] caching

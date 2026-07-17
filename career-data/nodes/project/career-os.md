@@ -20,6 +20,12 @@ updated: "2026-07-13"
 
 CareerOS is a Personal Knowledge Compiler. Markdown files are the source code; the compiler transforms them into a Knowledge Graph, and the graph powers multiple outputs: Resume, Portfolio, AI Chatbot, and MCP Server.
 
+## Demo
+
+![[cover.png|caption=CareerOS]]
+
+![[demo.mp4|caption=Compile → Resume / Interview|poster=poster.png]]
+
 ## Architecture
 
 The system follows a strict compiler pipeline:
