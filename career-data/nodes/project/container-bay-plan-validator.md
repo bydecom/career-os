@@ -1,76 +1,127 @@
 ---
 id: container-bay-plan-validator
 type: project
-name: "Container Bay Plan Validator"
+name: "Bay Checker"
 schemaVersion: "1"
+aliases:
+  - bay-checker
 tags:
   - logistics
   - desktop-app
   - data-processing
+  - maritime
 status: active
 role: "Python Developer"
 company: freelance
 period: "Sep/2025 - Dec/2025"
 visibility: private
 created: "2025-09-01"
-updated: "2026-07-13"
+updated: "2026-07-18"
 ---
 
 ## Overview
 
-A Python-based desktop application supporting container bay plan validation
-for maritime logistics operations — verifying that a proposed container
-stowage plan doesn't violate physical stability or structural rules before
-it's executed at a port.
+**Bay Checker** — a specialized desktop app for maritime stowage ops.
+Transforms raw, unstructured Excel/PDF bay-plan logs into deterministic
+2D/3D grid matrices, then programmatically enforces stacking and load
+rules so human error does not ship unsafe plans.
+
+Built for complex port logistics (e.g. Tien Sa Port): balance strict
+safety constraints with dynamic operational needs. Private / internal use.
 
 ## Demo
 
-![[cover.png|caption=Container Bay Plan Validator]]
+![[cover.png|caption=Bay Checker]]
 
-![[demo.mp4|caption=Bay plan validation|poster=poster.png]]
+![[demo.mp4|caption=Excel → grid → stability errors|poster=poster.png]]
 
 ## Problem
 
-Bay plans arrive as unstructured 6-digit LOC telemetry in Excel/PDF exports,
-not as a clean spatial model. Manually checking whether a plan violates
-"heavy-on-light" stacking rules, or whether two adjacent bays actually form
-a single virtual 40ft slot (spanning what look like two independent 20ft
-bays), is error-prone under time pressure at a live port operation.
+Bay plans arrive as noisy 6-digit LOC telemetry (`BBRRTT`) in Excel/PDF —
+not as a spatial model. Under time pressure, planners must catch
+heavy-on-light violations, 20ft/40ft bay pairing, deck/hold VGM limits,
+and port/starboard imbalance by eye. Misses become safety and schedule risk.
 
-## Chosen Solution
+## Runtime Pipeline
 
-- Deterministic parser: ingests unstructured 6-digit LOC codes from
-  Excel/PDF ([[pandas]], [[pdfplumber]], regex) and reconstructs a
-  verifiable 2D/3D maritime container stowage matrix
-- Strict separation of concerns: data ingestion layer decoupled from the
-  business rules engine (heavy-on-light stability algorithm, dynamic load
-  assessment)
-- Interactive UI ([[tkinter]]) with bay-slice navigation for real-time
-  spatial violation highlighting
-- Packaged as a standalone executable via [[pyinstaller]] for offline use
-  in port operations with no dependency install required on-site
+1. Import Excel / PDF (`.xlsx` / `.xls` / PDF tables)
+2. Sanitize LOC codes — zero-pad, truncate noise ([[pandas]], [[pdfplumber]])
+3. Decode `BBRRTT` → Bay / Row / Tier; identify size from `SzTp` (+ bay parity fallback)
+4. Logical bay pairing — even 40ft bays occupy two odd 20ft slots; sync partner bays
+5. Rebuild deck/hold grids (`bay_object.py` state machine)
+6. Run rules engine (`validator.py`) — stability, sectional VGM, stack limits, balance
+7. Render violations in [[tkinter]] grid + side-panel logs; export errors to Excel
+8. Package offline via [[pyinstaller]] for port machines with no pip install
 
-## Challenges
+## Core Capabilities
 
-- **Virtual 40ft bays spanning dual 20ft slots**: some bay positions that
-  look like two independent 20ft slots in the raw LOC data are structurally
-  one 40ft container footprint. Naive per-slot validation produced false
-  positives (flagging a valid 40ft container as violating a 20ft
-  constraint). Solved with cross-bay footprint lookups that resolve the
-  pairing before running stability checks — eliminating the false
-  positives entirely.
+### Intelligent Parsing & Spatial Mapping
 
-## Key Decisions
+Not 1:1 column mapping — reconstructs vessel geometry. BBRRTT decode,
+even/odd bay pairing (40ft spans two 20ft slots; preserve independent
+bays like `00`), deck tiers `94→80` (≤17 slots) and hold `14→02` (≤15 slots).
 
-- **Decouple ingestion from the rules engine** — the LOC-code parsing
-  logic and the heavy-on-light stability algorithm were kept as separate
-  layers specifically so that a change in the input format (a new
-  telemetry export style) wouldn't risk touching validated business logic,
-  and vice versa.
+### Deterministic Stack Stability
+
+Enforces heavy-on-light with mixed stowage: compare 20ft only to 20ft,
+40ft only to 40ft (no cross-size false positives). For paired 40ft bays,
+vertical traversal looks up partner bays for the supporting base.
+
+### Dynamic Load & Balance
+
+Sectional Deck/Hold VGM totals; per-row stack limits by composition
+(pure 20 / pure 40 / mixed); transverse center-of-gravity for severe
+port/starboard imbalance alerts.
+
+### Error Mode + Checker Mode
+
+Error Mode highlights violating containers in red with tier-level logs;
+thresholds global or per-bay. Checker Mode reconciles a target ID+LOC
+list against the parsed grid → **Matched** / **Position Mismatch**.
+
+### Offline Desktop Delivery
+
+[[tkinter]] + `tksheet` UI; modular widgets (`UI_Components/`). Standalone
+Windows executable via [[pyinstaller]] — no on-site dependency install.
+
+### Ingestion / Rules Decoupling
+
+`file_reader.py` → dictionary; `bay_object.py` grid state; `validator.py`
+rules; `visualizer.py` UI. Input-format changes do not touch validated
+business logic.
+
+## Engineering Decisions
+
+- **Decouple ingestion from rules** — new telemetry export style must not
+  risk validated stability logic.
+- **Explicit domain model for 40ft pairing** — surface LOC shape is not
+  enough; even/odd maritime rules prevent false positives.
+- **Strict size isolation in stability** — bypass cross-size comparisons
+  intentionally.
+- **Offline PyInstaller ship** — port ops often lack network / admin rights.
+
+## Tradeoffs
+
+- Desktop Tkinter vs web multi-user — chose offline-first for quay-side use.
+- Private internal tool — proof is demo + domain narrative, not a public repo.
+- PDF path via [[pdfplumber]] — OCR/edge cases remain operational care items.
+
+## Evidence
+
+- Implementation: `file_reader.py` · `bay_object.py` · `validator.py` ·
+  `visualizer.py` · `UI_Components/*` · `pdf_module.py`
+- Validation: Error Mode spatial highlight + Checker Mode match/mismatch ·
+  export to Excel for planners / authorities
+- Measurement: Deck 8 tiers / Hold 7 tiers · even/odd 40ft sync ·
+  dynamic stack limits by composition
+- Context: Freelance [[freelance]] · Sep–Dec 2025 · Tien Sa–class ops
+
+Stack: [[python]], [[pandas]], [[tkinter]], [[pdfplumber]], [[pyinstaller]]
 
 ## Lessons Learned
 
-- Physical/spatial domain rules (which slots are "really" one structural
-  unit) can't always be inferred from the data's surface shape — the
-  40ft/20ft pairing bug taught that a purely data-driven parser needs an
-  explicit domain model layered on top, not just cleaner parsing.
+- Spatial domain rules cannot always be inferred from data surface shape —
+  40ft/20ft pairing needs an explicit maritime model on top of parsing.
+- Decoupling ingestion from rules keeps safety logic stable when exporters
+  change column noise.
+- For port tools, offline installability is part of the product, not ops afterthought.

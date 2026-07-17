@@ -37,5 +37,5 @@ so the tool author only writes the actual capability (e.g. `get_impact`,
 
 ## Used In
 
-- [[graphrag-code]] — exposes `get_impact` and `plan_change` as MCP tools
+- [[graphrag-code]] — exposes `plan_change`, `get_impact`, `get_context`, and related structural tools
 - [[medical-citation-agent]] — exposes `extract_claims` as an MCP tool

@@ -12,13 +12,23 @@ tags:
   - typescript
 status: active
 role: "Full-stack Engineer & Architect"
+period: "Jul/2026 - Present"
+visibility: public
 created: "2026-07-01"
-updated: "2026-07-13"
+updated: "2026-07-18"
 ---
 
 ## Overview
 
-CareerOS is a Personal Knowledge Compiler. Markdown files are the source code; the compiler transforms them into a Knowledge Graph, and the graph powers multiple outputs: Resume, Portfolio, AI Chatbot, and MCP Server.
+CareerOS is a **Personal Knowledge Compiler**. Markdown nodes are the source
+code; the compiler builds a Knowledge Graph IR; typed projections power
+Resume, Portfolio, and Interview — without rewriting the story for each
+surface.
+
+Hire-first demo first: Landing → Project Detail → Resume → Deploy. Studio /
+Dashboard stay deferred until a public URL exists.
+
+Repo: this monorepo (`career-knowledge-base`).
 
 ## Demo
 
@@ -26,34 +36,97 @@ CareerOS is a Personal Knowledge Compiler. Markdown files are the source code; t
 
 ![[demo.mp4|caption=Compile → Resume / Interview|poster=poster.png]]
 
-## Architecture
+## Problem
 
-The system follows a strict compiler pipeline:
+Engineers maintain parallel truths: a CV, a portfolio site, interview talking
+points, and scattered notes. Each rewrite drifts. Recruiters see polish; the
+author sees copy-paste debt. Career knowledge needs a **single authorable
+source** and **deterministic projections**, not another CMS.
 
-```
-Markdown → Lexer → Parser → Semantic Analyzer → Validator → Graph → Artifacts
-```
+## Runtime Pipeline
 
-Key components use [[rabbitmq]] for async pipeline events.
+1. Author Markdown nodes under `career-data/nodes/` (wiki-links = edges)
+2. Lexer — frontmatter + body split ([[zod]] schemas)
+3. Parser — [[unified]] / [[remark]] AST + wiki-link extraction
+4. Ontology / Semantic Analyzer — typed nodes, edge inference by section
+5. Validator — schema + orphan diagnostics
+6. Graph IR — `graph.json` + [[sqlite]] `graph.db`
+7. Projections — ResumeIR · PortfolioIR · ConversationIR
+8. Surfaces — Landing, `/project/[id]`, `/resume`, Interview `/api/ask`
+   (hybrid retrieval: metadata + BM25 + [[qdrant]] + graph)
 
-## Chosen Solution
+## Core Capabilities
 
-Built on [[typescript]] as the primary language. Uses [[unified]] and [[remark]] for Markdown AST parsing.
+### Knowledge as Source Code
 
-## Challenges
+Markdown is the only authorable source in v1 — no CMS admin UI. Compile
+before any LLM verbalization (AI-as-view, not AI-as-source).
 
-- Maintaining a single source of truth across multiple output formats
-- Designing an ontology that is flexible yet strict enough for reliable graph construction
+### Compiler Packages as Pure Libraries
 
-## Key Decisions
+`packages/*` stay I/O-free; `apps/cli` and `services/*` own the filesystem
+and runtime. Rebuild-from-source stays honest.
 
-- [Edges are compiler output](../../../knowledge/career-os/why-edges-are-compiler-output.md) — Relationships are derived from wiki-links, not hand-authored (see `knowledge/career-os/` for the full reasoning)
-- Compiler is a pure library in `packages/` with zero runtime dependencies
+### Edges as Compiler Output
 
-## Metrics
+Wiki-links become graph edges — not hand-authored relationship tables. See
+`knowledge/career-os/why-edges-are-compiler-output.md`.
 
-> ⚠️ Unverified — author to confirm after v1.0 release
+### Typed Projections
+
+One graph → ResumeIR (printable CV), Portfolio / Project Detail narrative,
+ConversationIR for Interview ask. Same facts, different shapes.
+
+### Hybrid Retrieval for Interview
+
+Ask path fuses metadata, BM25, vector ([[qdrant]]), and graph — Execution
+Trace shows real engine scores, not fake chain-of-thought.
+
+### Hire-first Product Surfaces
+
+Landing sells the demo (Architecture + Featured Products); Project Detail
+uses MarketingShell so recruiters never hit a login wall. Phase 2
+capabilities wait for a public URL.
+
+## Engineering Decisions
+
+- **Edges are compiler output** — wiki-links drive the graph.
+- **Deterministic compile before LLM** — progressive certainty; retrieval
+  ranks evidence, model verbalizes after.
+- **Curated Product Cards until PortfolioIR lands** — hire clarity over
+  fully IR-driven Landing copy.
+- **MarketingShell for Project Detail** — no auth wall for recruiters.
+- **[[typescript]] + [[nodejs]] monorepo** — one language across compiler,
+  web, and services.
+
+## Tradeoffs
+
+- Curated Landing copy vs fully IR-driven marketing — owned clarity for
+  hire-demo; IR-driven narrative is the someday path.
+- SQLite graph for v1 vs Neo4j/cluster — ops simplicity; scale later.
+- Park Knowledge OS / Candidate KG platform docs under `docs/someday/` —
+  do not implement before Deploy + reviewer pass.
+
+## Evidence
+
+- Implementation: `packages/compiler` · ontology · ResumeIR · Interview
+  ask + Execution Trace · Project Detail curated depth
+- Validation: `npm run compile` — nodes/edges/diagnostics; ResumeIR live
+  on `/resume`
+- Measurement: authored nodes under `career-data/nodes/` · 6 compiler
+  packages · Featured Products prove GraphRAG / Medical / CSM sibling work
+- Docs: `docs/02-architecture` · `docs/01-adr` · `docs/00-vision/09-roadmap.md`
+
+Stack: [[typescript]], [[nodejs]], [[unified]], [[remark]], [[zod]],
+[[react]], [[sqlite]], [[qdrant]], [[rabbitmq]] (pipeline events),
+[[gemini-ai]] (Interview verbalization)
+
+Sibling proofs: [[graphrag-code]] · [[medical-citation-agent]] ·
+[[conversational-state-machine]]
 
 ## Lessons Learned
 
-Domain-driven structure (knowledge by concept) is far more maintainable than tech-stack-based folder organization.
+- Domain-first folders beat tech-stack folders when knowledge is the product.
+- If Landing explains philosophy but not proof, recruiters bounce —
+  Architecture + Featured Products close that gap.
+- Principle #0: job first — ship a recruiter-usable URL before platform sprawl.

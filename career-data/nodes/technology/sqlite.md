@@ -36,4 +36,5 @@ read-heavy, single-machine, or CLI-distributed tools.
 ## Used In
 
 - [[graphrag-code]] — stores the AST-derived code knowledge graph
-- [[conversational-state-machine]] — persistence for serializable context objects
+- [[conversational-state-machine]] — flows-as-data (intents, slots, policies) for the Dialogue Runtime
+- [[career-os]] — compiled Knowledge Graph IR (`graph.db`) for Resume / Interview projections

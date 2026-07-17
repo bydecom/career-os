@@ -43,3 +43,6 @@ hard-wired to one vendor.
 ## Used In
 
 - [[ecommerce-platform]] — storefront/admin chatbots (tool-calling orchestration), product description enhancer, daily admin mini-advice (with heuristic fallback), async feedback sentiment analysis, and product embeddings for [[qdrant]]
+- [[conversational-state-machine]] — structured-output NLU under Dynamic Schema Builder (catalog enums)
+- [[career-os]] — Interview verbalization after hybrid retrieval (AI-as-view)
+- [[graphrag-code]] — optional terminal agent (`graphrag-code-agent`); not on the structural retrieval path

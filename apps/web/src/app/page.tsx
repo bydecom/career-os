@@ -7,17 +7,18 @@ import { Architecture } from '@/components/marketing/Architecture';
 import { FeaturedProjects } from '@/components/marketing/FeaturedProjects';
 import { TechCloud } from '@/components/marketing/TechCloud';
 import { pickFeaturedProjects } from '@/components/marketing/featuredData';
-import { loadResumeIR } from '@/lib/loadGenerated';
+import { loadGraphStats, loadResumeIR } from '@/lib/loadGenerated';
 
 export default function LandingPage() {
   const ir = loadResumeIR();
-  const projects = pickFeaturedProjects(ir);
+  const stats = loadGraphStats();
+  const projects = pickFeaturedProjects(ir, stats);
 
   return (
     <MarketingShell>
       <main>
-        <Hero />
-        <Pipeline />
+        <Hero stats={stats} />
+        <Pipeline stats={stats} />
         <WhatItSolves />
         <Philosophy />
         <Architecture />

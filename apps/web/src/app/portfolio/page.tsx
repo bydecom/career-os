@@ -3,11 +3,11 @@ import { MarketingShell } from '@/components/shell/MarketingShell';
 import { FeaturedProjects } from '@/components/marketing/FeaturedProjects';
 import { pickFeaturedProjects } from '@/components/marketing/featuredData';
 import { Container } from '@/components/ui';
-import { loadResumeIR } from '@/lib/loadGenerated';
+import { loadResumeIR, loadGraphStats } from '@/lib/loadGenerated';
 
 export default function PortfolioPage() {
   const ir = loadResumeIR();
-  const featured = pickFeaturedProjects(ir);
+  const featured = pickFeaturedProjects(ir, loadGraphStats());
   const featuredIds = new Set(featured.map((p) => p.id));
   const allProjects = ir?.projects ?? [];
   const rest = allProjects.filter((p) => !featuredIds.has(p.id));

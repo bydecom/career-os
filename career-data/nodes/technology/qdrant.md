@@ -39,3 +39,4 @@ at search/recommend time.
 ## Used In
 
 - [[ecommerce-platform]] — product embeddings (768-dim, L2-normalized, cosine distance) synced asynchronously via a RabbitMQ worker after product create/update, used for semantic product search and recommendations
+- [[career-os]] — vector arm of hybrid Interview retrieval (fused with metadata, BM25, and graph)

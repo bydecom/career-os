@@ -2,8 +2,11 @@ import Link from 'next/link';
 import { MarketingShell } from '@/components/shell/MarketingShell';
 import { Architecture } from '@/components/marketing/Architecture';
 import { Pipeline } from '@/components/marketing/Pipeline';
+import { loadGraphStats } from '@/lib/loadGenerated';
 
 export default function AboutPage() {
+  const stats = loadGraphStats();
+
   return (
     <MarketingShell>
       <main>
@@ -17,7 +20,7 @@ export default function AboutPage() {
             Portfolio, and Interview AI are projections — not separate content stores.
           </p>
         </div>
-        <Pipeline />
+        <Pipeline stats={stats} />
         <Architecture />
         <div className="mx-auto max-w-container px-6 pb-20 md:px-10">
           <p className="text-sm text-muted">

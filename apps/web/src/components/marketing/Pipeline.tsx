@@ -35,7 +35,7 @@ const PIPELINE: {
     title: 'Knowledge Graph',
     subtitle: 'Intermediate Representation · single source of truth',
     icon: Network,
-    details: ['48 nodes', '95 edges', 'graph.json + SQLite', 'Ontology-typed'],
+    details: ['graph.json + SQLite', 'Ontology-typed'],
     variant: 'hero',
   },
 ];
@@ -87,7 +87,7 @@ function FanOutConnectors() {
   );
 }
 
-function GraphConstellation() {
+function GraphConstellation({ graphLabel }: { graphLabel: string }) {
   const nodes = [
     { x: '12%', y: '30%', delay: 0 },
     { x: '38%', y: '18%', delay: 0.15 },
@@ -117,7 +117,7 @@ function GraphConstellation() {
         />
       ))}
       <div className="absolute bottom-2 right-3 font-mono text-[10px] text-emerald-400/90">
-        48 nodes · 95 edges
+        {graphLabel}
       </div>
     </div>
   );
@@ -140,8 +140,27 @@ function stageClass(variant: (typeof PIPELINE)[number]['variant'], hovered: bool
   }
 }
 
-export function Pipeline() {
+export function Pipeline({
+  stats,
+}: {
+  stats?: { totalNodes: number; totalEdges: number } | null;
+}) {
   const [hovered, setHovered] = useState<StageId | 'proj' | null>(null);
+  const graphLabel =
+    stats != null ? `${stats.totalNodes} nodes · ${stats.totalEdges} edges` : '— nodes · — edges';
+
+  const stages = PIPELINE.map((stage) =>
+    stage.id === 'graph'
+      ? {
+          ...stage,
+          details: [
+            `${stats?.totalNodes ?? '—'} nodes`,
+            `${stats?.totalEdges ?? '—'} edges`,
+            ...stage.details,
+          ],
+        }
+      : stage,
+  );
 
   return (
     <section className="px-6 py-16 md:px-10 md:py-24">
@@ -168,7 +187,7 @@ export function Pipeline() {
           </div>
 
           <div className="flex flex-col items-center px-4 py-8 md:px-10">
-            {PIPELINE.map((stage, index) => {
+            {stages.map((stage, index) => {
               const Icon = stage.icon;
               const isHot = hovered === stage.id;
               return (
@@ -214,7 +233,9 @@ export function Pipeline() {
                         </div>
                         <p className="mt-1 text-sm text-muted">{stage.subtitle}</p>
 
-                        {stage.variant === 'hero' ? <GraphConstellation /> : null}
+                        {stage.variant === 'hero' ? (
+                          <GraphConstellation graphLabel={graphLabel} />
+                        ) : null}
 
                         <AnimatePresence initial={false}>
                           {isHot ? (
@@ -241,7 +262,7 @@ export function Pipeline() {
                     </div>
                   </motion.button>
 
-                  {index < PIPELINE.length - 1 ? <Connector /> : null}
+                  {index < stages.length - 1 ? <Connector /> : null}
                 </div>
               );
             })}

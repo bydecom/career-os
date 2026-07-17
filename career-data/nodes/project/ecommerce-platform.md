@@ -19,23 +19,24 @@ period: "Mar/2026 - Jun/2026"
 demo: "https://d7ozoo9vtkn42.cloudfront.net/"
 visibility: private
 created: "2026-06-01"
-updated: "2026-07-10"
+updated: "2026-07-18"
 ---
 
 ## Overview
 
-Built during an On-the-Job Training (OJT) placement at [[fpt-software]]
-(Mar–Jun 2026). A full-stack e-commerce platform (buyer storefront + admin
-console) with the initial build shipped in ~5 weeks, then deliberately
-hardened across 12 documented rounds of technical critique before going
-live on real AWS infrastructure. Not a CRUD demo — the
-focus was production-shaped concerns: money paths (payment), stock races
-(inventory), auth sessions, async workers, and deploy/rollback safety.
+Built during OJT at [[fpt-software]] (Mar–Jun 2026). A **production-shaped**
+full-stack shop — buyer storefront + admin — not a CRUD demo. ~5 weeks to
+core (including [[gemini-ai]] / [[qdrant]] AI), then deliberately hardened
+across documented critique rounds before live on real [[aws]] infrastructure.
 
-> Interview-friendly one-liner: "In five weeks I shipped an e-commerce core
-> with Gemini/Qdrant AI, then deliberately hardened order, payment,
-> inventory, auth, and async workers — and documented every production
-> punch."
+Focus: money paths, stock races, auth sessions, async workers, and
+deploy/rollback safety.
+
+> One-liner: *In five weeks I shipped an e-commerce core with Gemini/Qdrant
+> AI, then hardened order, payment, inventory, auth, and async workers —
+> and documented every production punch.*
+
+Live demo: [CloudFront storefront](https://d7ozoo9vtkn42.cloudfront.net/)
 
 ## Demo
 
@@ -43,119 +44,108 @@ focus was production-shaped concerns: money paths (payment), stock races
 
 ![[demo.mp4|caption=Storefront + admin walkthrough|poster=poster.png]]
 
-## Chosen Solution
+## Problem
 
-- Backend: [[nodejs]] 20, Express 5, [[typescript]], [[prisma]], [[redis]], JWT, Zod
-- Frontend: [[angular]] 17 (standalone components + signals), Tailwind CSS
-- Data: [[postgresql]] 16 (`pg_trgm` for fuzzy search) → Neon in production
-- Message broker: [[rabbitmq]] 3 (`amqplib`) for email + AI workers
-- AI: [[gemini-ai]] (embeddings + chat) + [[qdrant]] for vector search
-- Payment: [[vnpay]] sandbox (create + IPN verify)
-- Infra: [[docker]] Compose (local), [[aws]] (S3/CloudFront + EC2), [[pm2]] cluster mode
+Tutorial shops skip what breaks in production: double-checkout races, VNPay
+retries, refresh-token theft, AI latency on the HTTP hot path, and PM2
+cluster footguns. A recruiter-facing portfolio needs proof those paths were
+designed, tested, and hardened on real infra — not just listed in a README.
 
-## Architecture
+## Runtime Pipeline
 
-```
-Angular 17 --HTTPS--> Express API (PM2 cluster) --> PostgreSQL (Neon)
-                          |                      --> Redis (Upstash)
-                          |--publish--> RabbitMQ --> Email Worker
-                          |                      --> AI Worker --> Gemini + Qdrant
-                          |--IPN webhook--> VNPay
-```
+1. [[angular]] 17 storefront / admin → HTTPS `/api`
+2. Express 5 API ([[nodejs]] · [[typescript]] · [[zod]]) under [[pm2]] cluster
+3. Persist via [[prisma]] → [[postgresql]] / Neon; sessions & holds in [[redis]] / Upstash
+4. Presigned PUT → MinIO / [[aws]] S3 (+ CloudFront media)
+5. Publish side-effects to [[rabbitmq]] → email worker + AI/Qdrant worker
+6. Money path: [[vnpay]] create URL + synchronous IPN verify (idempotent)
+7. Order status machine enforced in service (`PENDING → CONFIRMED → …`)
+8. CI smoke on `/api/health` → deploy or auto-rollback ([[github-actions]])
 
-**Order status machine (enforced in service, not just UI):**
+## Core Capabilities
 
-```
-PENDING → CONFIRMED → SHIPPING → DONE
-PENDING → CANCELLED   (only while PENDING)
-```
+### Auth & Session Hardening
 
-## Key Decisions
+Email-verify-before-user-create; short-lived access JWT (in-memory on
+client); refresh rotation (HttpOnly cookie, hashed in [[redis]]); `jti`
+blacklist on logout; OTP soft-lockout; idle timeout; single-flight client
+refresh.
 
-- **Stock reservation via Redis + Lua script** — atomic checkout hold with
-  TTL cleanup under a distributed lock, so a PM2 cluster (multiple instances)
-  never double-runs the expiry sweep and never oversells inventory.
-- **VNPay IPN kept synchronous, not queued** — the payment webhook is
-  idempotent-by-design (VNPay retries on non-`00` response); moving it to a
-  queue would have broken that retry guarantee and risked charging a
-  customer without marking the order `PAID`. Only side-effects (email,
-  admin notification) were pushed to RabbitMQ after the transaction commits.
-- **AI kept as a provider abstraction** (`IAIProvider.generateJson<T>()`),
-  not a hard dependency on Gemini — admin can flip provider via DB-backed
-  config without a redeploy, and a `LocalAIProvider` fallback keeps the
-  product usable if the AI budget or quota is exhausted.
-- **Async-only for AI tasks that don't need an immediate response** —
-  product vector sync and feedback sentiment analysis moved off the HTTP
-  hot path into an `ai.worker.ts` RabbitMQ consumer (`prefetch = 1` to
-  protect Gemini rate limits), cutting product-save latency from ~2s to
-  under 10ms. Chatbot and description-enhancer stayed synchronous because
-  the user is actively waiting for that response.
-- **Refresh-token rotation, not just access tokens** — HttpOnly cookie,
-  hashed in Redis, rotated on every refresh, with a `jti` blacklist on
-  logout, to reduce the blast radius of a stolen refresh token.
+### Inventory Reservation (Race-safe)
 
-## Challenges
+[[redis]] checkout stock hold + TTL; **Lua** atomic reserve + idempotency;
+cleanup under distributed lock (`SETNX`) so [[pm2]] cluster does not
+double-run expiry. Cancel/fail returns stock; guards when already `PAID`.
 
-- **Checkout stock races**: two buyers checking out the same last unit at
-  the same time. Solved with a Redis Lua script for atomic reserve +
-  idempotency (same hold key → success, no double-count), plus a
-  distributed-lock-guarded cleanup loop for expired reservations.
-- **PM2 cluster mode was not safe by default**: no graceful shutdown
-  handler, in-memory rate-limit store (bypassable across instances), and a
-  per-instance cleanup `setInterval` that would race in cluster mode. All
-  three had to be fixed (SIGTERM handler, `RedisStore` for rate limiting,
-  Redis `SETNX` lock for the cleanup loop) before cluster mode could be
-  trusted in production.
-- **Neon serverless connection pool exhaustion**: PM2 cluster × multiple
-  workers could open more connections than Neon's pooler allows. Fixed with
-  `connection_limit=3` tuned per instance on the connection string.
-- **DLQ as a silent, unbounded sink**: dead-letter queues for email/AI
-  workers had no TTL or max-length, meaning they could grow forever and
-  eventually fill disk. Fixed with a 7-day TTL and a 500-message cap.
-- **Cross-domain auth cookies**: frontend on CloudFront, backend on a
-  separate EC2 domain — browsers blocked the refresh cookie under default
-  `SameSite` policy until it was explicitly set to `sameSite: 'none'` +
-  `secure: true`.
+### Orders & VNPay Money Path
+
+Enforced status machine + [[prisma]] `$transaction` + `OrderEvent` audit.
+[[vnpay]] signed create + IPN verify, amount rounding defense, idempotent
+duplicate-IPN handling — IPN stays **synchronous** so VNPay retries keep
+their guarantee.
+
+### Async Workers (Email + AI)
+
+[[rabbitmq]] durable topology; email + AI consumers; manual ACK/NACK; DLQ
+(TTL 7d, max 500); worker reconnect; `prefetch = 1` on AI to protect Gemini
+quotas. Vector sync / feedback sentiment off the HTTP hot path.
+
+### AI Module (Provider Abstraction)
+
+`IAIProvider` → Gemini or Local fallback (DB-backed `SystemConfig` flip,
+no redeploy). Storefront + admin tool-calling chatbots; description
+enhancer; daily mini-advice with heuristic fallback; 768-dim L2 embeddings
+→ [[qdrant]] cosine recommend.
+
+### Ops Resilience
+
+[[pm2]] cluster + graceful SIGTERM; Redis rate-limit with MemoryStore
+fallback; health check smoke; CI **auto-rollback**; Neon
+`connection_limit` tuned for pooler; multi-round `docs/codebase-review/`
+hardening culture.
+
+## Engineering Decisions
+
+- **Redis Lua stock reservation** — atomic hold + idempotency under
+  cluster-safe cleanup lock.
+- **VNPay IPN synchronous, not queued** — retries require immediate
+  success/fail; only side-effects go to RabbitMQ after commit.
+- **AI provider abstraction** — swap Gemini ↔ local via DB config; fail soft
+  on dashboard advice.
+- **Async-only for non-interactive AI** — product vector sync / feedback
+  analyze off HTTP (~2s → <10ms save); chat stays sync because the user waits.
+- **Refresh-token rotation + `jti` blacklist** — shrink blast radius of
+  stolen refresh tokens.
+
+## Tradeoffs
+
+- Hardening depth vs Layer-8 observability (centralized logging / APM) —
+  92.3% of R1–R11 checklist closed; observability deferred post-go-live.
+- Fail-open vs fail-closed JWT blacklist when Redis is down — hybrid by
+  remaining TTL (product trade-off, not pure tech).
+- Private repo / OJT context — live CloudFront demo + documented critique
+  rounds carry the proof.
 
 ## Evidence
 
-- 12 rounds of documented technical critique (`docs/codebase-review/`):
-  architecture review → implementation → production log verification →
-  fix, repeated. Round 7, for example, caught a `RedisStore` race
-  condition and an under-sized PM2 `listen_timeout` directly from reading
-  `pm2 logs` on the live EC2 instance after deploy.
-- Unit tests on the money-critical paths: 25 test cases for VNPay signature
-  verification + IPN handling, 19 test cases for Redis stock-reservation
-  Lua-script idempotency — both passing 100% on first full run.
-- Self-inflicted production incidents documented and fixed live: RabbitMQ
-  running bare-metal instead of the assumed Docker Compose setup, Node.js
-  IPv6-first DNS resolution timing out on EC2 (fixed via
-  `--dns-result-order=ipv4first`), PM2 workers not inheriting
-  `.env.production` when run in `fork` mode.
+- Implementation: Express modules (auth, order, inventory, payment, ai) ·
+  Angular storefront/admin · RabbitMQ workers · PM2 / AWS deploy
+- Validation: VNPay unit tests **25/25** · stock reservation Lua **19/19** ·
+  12 rounds in `docs/codebase-review/` (plan-vs-reality, battle tests,
+  self-healing map)
+- Measurement: **132+** EC2 deploys via zero-downtime PM2 CI · product-save
+  ~2s → <10ms after async vector sync · **92.3%** R1–R11 checklist (36/39)
+- Live: [CloudFront demo](https://d7ozoo9vtkn42.cloudfront.net/)
 
-## Metrics
-
-- 132+ deployments executed to AWS EC2 via the zero-downtime PM2 cluster
-  CI/CD pipeline (auto-rollback + backup + S3/CloudFront sync).
-- Product-save latency (admin path): ~2s → <10ms after moving Qdrant/Gemini
-  vector sync off the HTTP request into an async worker.
-- Test coverage on critical paths: VNPay (25/25 passing), stock reservation
-  (19/19 passing).
-- 92.3% of the R1–R11 hardening checklist closed (36/39 items), audited
-  directly against the running code — remaining gaps are Layer 8
-  observability (centralized logging, metrics, APM), explicitly deferred
-  post-go-live.
+Stack: [[nodejs]], [[typescript]], [[angular]], [[prisma]], [[postgresql]],
+[[redis]], [[rabbitmq]], [[gemini-ai]], [[qdrant]], [[vnpay]], [[jwt]],
+[[zod]], [[docker]], [[aws]], [[pm2]], [[github-actions]], [[fpt-software]]
 
 ## Lessons Learned
 
-- "Works on dev" is not the same claim as "works on this cloud's network
-  stack" — IPv6 DNS resolution order and bare-metal-vs-Docker assumptions
-  were both invisible until they hit the real EC2 instance.
-- A security fail-open/fail-closed decision (JWT blacklist when Redis is
-  down) is a product trade-off, not a purely technical one — the resolved
-  hybrid (fail-closed if a token's remaining TTL is large, fail-open if it's
-  about to expire anyway) came from treating it that way.
-- Documenting the *argument* behind a decision (the "💬 Tranh luận" rounds
-  in `technical_critique.md`) turned out to matter more than the conclusion
-  itself — it's what makes the reasoning reusable three months later or for
-  a new teammate.
+- "Works on dev" ≠ "works on this cloud's network stack" — IPv6 DNS order
+  and bare-metal-vs-Docker assumptions only failed on real EC2.
+- Fail-open/fail-closed security choices are product decisions; document
+  the argument, not only the conclusion.
+- Critique → implement → verify on production logs is what turns a 5-week
+  build into interview-grade evidence.

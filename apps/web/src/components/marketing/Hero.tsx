@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 
-function HeroPipelineVisual() {
+function HeroPipelineVisual({ graphLabel }: { graphLabel: string }) {
   return (
     <motion.div
       initial={{ opacity: 0, x: 16 }}
@@ -32,7 +32,7 @@ function HeroPipelineVisual() {
 
         <div className="relative mt-1 w-full rounded-md border border-primary/50 bg-gradient-to-b from-primary/15 to-transparent px-3 py-3 text-center shadow-[0_0_32px_-8px_rgba(16,185,129,0.7)]">
           <p className="text-xs font-medium text-foreground">Knowledge Graph</p>
-          <p className="mt-1 text-[10px] text-emerald-400/90">48 nodes · 95 edges</p>
+          <p className="mt-1 text-[10px] text-emerald-400/90">{graphLabel}</p>
           <div className="mx-auto mt-3 flex h-8 max-w-[140px] items-center justify-center gap-2">
             {[0, 1, 2, 3].map((i) => (
               <motion.span
@@ -80,7 +80,15 @@ function HeroPipelineVisual() {
   );
 }
 
-export function Hero() {
+export function Hero({
+  stats,
+}: {
+  stats?: { totalNodes: number; totalEdges: number } | null;
+}) {
+  const nodes = stats?.totalNodes ?? '—';
+  const edges = stats?.totalEdges ?? '—';
+  const graphLabel = `${nodes} nodes · ${edges} edges`;
+
   return (
     <section className="relative overflow-hidden px-6 pb-12 pt-16 md:px-10 md:pb-16 md:pt-20">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,_rgba(16,185,129,0.12),_transparent_55%)]" />
@@ -126,9 +134,9 @@ export function Hero() {
           </div>
 
           <p className="mt-8 font-mono text-[11px] tracking-wide text-muted-foreground">
-            <span className="text-foreground/80">48</span> Nodes
+            <span className="text-foreground/80">{nodes}</span> Nodes
             <span className="mx-2 text-zinc-700">·</span>
-            <span className="text-foreground/80">95</span> Edges
+            <span className="text-foreground/80">{edges}</span> Edges
             <span className="mx-2 text-zinc-700">·</span>
             ResumeIR
             <span className="mx-2 text-zinc-700">·</span>
@@ -137,7 +145,7 @@ export function Hero() {
         </div>
 
         <div className="flex justify-center lg:justify-end">
-          <HeroPipelineVisual />
+          <HeroPipelineVisual graphLabel={graphLabel} />
         </div>
       </div>
     </section>
