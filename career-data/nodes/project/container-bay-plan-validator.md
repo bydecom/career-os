@@ -21,13 +21,19 @@ updated: "2026-07-18"
 
 ## Overview
 
-**Bay Checker** — a specialized desktop app for maritime stowage ops.
-Transforms raw, unstructured Excel/PDF bay-plan logs into deterministic
-2D/3D grid matrices, then programmatically enforces stacking and load
-rules so human error does not ship unsafe plans.
+Converts unstructured maritime bay-plan logs into deterministic spatial
+models for automated safety validation. Desktop app for maritime stowage
+ops: Excel/PDF → 2D/3D grids → stacking and load rules so human error does
+not ship unsafe plans.
 
-Built for complex port logistics (e.g. Tien Sa Port): balance strict
-safety constraints with dynamic operational needs. Private / internal use.
+Built for complex port logistics (e.g. Tien Sa Port). Private / internal use.
+
+## Highlights
+
+- Deterministic parser for unstructured 6-digit LOC telemetry (Excel/PDF) into verifiable 2D/3D stowage matrices.
+- Heavy-on-light stability and dynamic load assessment; ingestion decoupled from the rules engine.
+- Even/odd 40ft bay pairing via cross-bay footprint lookups — eliminates false-positive validation.
+- Tkinter bay-slice UI with real-time violation highlighting; PyInstaller executable for offline port ops.
 
 ## Demo
 

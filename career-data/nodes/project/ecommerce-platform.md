@@ -24,19 +24,24 @@ updated: "2026-07-18"
 
 ## Overview
 
-Built during OJT at [[fpt-software]] (Mar–Jun 2026). A **production-shaped**
-full-stack shop — buyer storefront + admin — not a CRUD demo. ~5 weeks to
-core (including [[gemini-ai]] / [[qdrant]] AI), then deliberately hardened
-across documented critique rounds before live on real [[aws]] infrastructure.
+Built a production-grade e-commerce platform during OJT at [[fpt-software]]
+(Mar–Jun 2026), integrating [[gemini-ai]], [[qdrant]] vector search,
+[[rabbitmq]], [[redis]], VNPay, and [[aws]] infrastructure — buyer
+storefront + admin, not a CRUD demo.
 
 Focus: money paths, stock races, auth sessions, async workers, and
 deploy/rollback safety.
 
-> One-liner: *In five weeks I shipped an e-commerce core with Gemini/Qdrant
-> AI, then hardened order, payment, inventory, auth, and async workers —
-> and documented every production punch.*
+> One-liner: Built a production-grade e-commerce platform integrating Gemini AI, Qdrant vector search, RabbitMQ, Redis, VNPay, and AWS infrastructure.
 
 Live demo: [CloudFront storefront](https://d7ozoo9vtkn42.cloudfront.net/)
+
+## Highlights
+
+- 132+ zero-downtime AWS EC2 deployments via PM2 cluster; CI/CD with auto-rollback, backup, and S3/CloudFront sync.
+- Dual-role Gemini chatbot (storefront + admin); RabbitMQ workers for Qdrant sync/AI analysis — product-save latency ~2s → <10ms.
+- VNPay IPN signature verification, Redis stock reservation cleanup, and idempotent concurrent transactions.
+- Dual rate-limiters (AI / Auth), Redis JWT blacklist, and 53+ tests covering IPN, stock idempotency, and Lua atomicity.
 
 ## Demo
 

@@ -12,10 +12,11 @@ const PRODUCTS: FeaturedProduct[] = [
     id: 'career-os',
     name: 'CareerOS',
     capability: 'Knowledge Compiler',
-    tagline: 'Personal Knowledge Compiler',
+    tagline: 'Personal Knowledge Compiler — Markdown → Graph → projections',
     problem: 'Career knowledge lives in scattered docs — every surface rewrites the same story.',
-    outcome: 'Compile Markdown into a Knowledge Graph, then project Resume · Portfolio · Interview.',
-    architectureTeaser: 'ResumeIR · PortfolioIR · ConversationIR',
+    outcome:
+      'Six pure packages compile wiki-links into a graph IR; ResumeIR + Interview ask (hybrid PCR) ship; Studio stays parked until a public URL.',
+    architectureTeaser: 'ontology · compiler · ResumeIR · hybrid ask',
     metrics: [
       { label: 'Nodes', value: '—' },
       { label: 'Edges', value: '—' },

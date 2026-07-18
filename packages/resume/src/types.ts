@@ -8,7 +8,7 @@ export type ResumeScope = 'master' | 'tailored';
 export interface ProjectResumeOptions {
   /** Business language: master = full graph projection; tailored = JD-constrained (v1.1+). */
   scope?: ResumeScope;
-  /** Max Key Decisions bullets per project. Default 4. */
+  /** Max Highlights / Key Decisions bullets per project. Default 4. */
   maxDecisions?: number;
   /** Max Metrics bullets per project. Default 3. */
   maxMetrics?: number;
@@ -26,6 +26,10 @@ export interface ResumeProfile {
   linkedin?: string;
   website?: string;
   summary: string;
+  /** Bullets from profile ## Specialties */
+  specialties: string[];
+  /** Bullets from profile ## Technical Stacks */
+  stacks: string[];
 }
 
 export interface ResumeExperience {
@@ -38,6 +42,10 @@ export interface ResumeExperience {
   endDate?: string;
   team?: string;
   summary: string;
+  /** Bullets from ## Highlights / Key Decisions */
+  highlights: string[];
+  /** Project ids linked from experience Evidence wiki-links / edges */
+  projectIds: string[];
 }
 
 export interface ResumeProject {

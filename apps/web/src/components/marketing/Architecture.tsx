@@ -16,35 +16,50 @@ const IRS = [
   { ir: 'ConversationIR', view: 'Interview AI' },
 ] as const;
 
+const LINE = 'bg-zinc-500';
+
 function ArrowDown({ className }: { className?: string }) {
   return (
     <div className={cn('flex flex-col items-center py-2', className)} aria-hidden>
-      <motion.div
-        className="h-6 w-px origin-top bg-gradient-to-b from-border to-primary/50 md:h-8"
-        initial={{ scaleY: 0 }}
-        whileInView={{ scaleY: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.35 }}
-      />
-      <span className="mt-0.5 text-[10px] text-primary">▼</span>
+      <div className={cn('h-6 w-px md:h-8', LINE)} />
+      <span className="mt-0.5 text-[10px] leading-none text-primary">▼</span>
     </div>
   );
 }
 
-function FanOut() {
+/**
+ * Knowledge → fan-out → 3 IRs.
+ * Same 3-col + gap-3 grid as the cards, so stems land on column centers.
+ */
+function KnowledgeFanOut() {
   return (
-    <div className="relative mx-auto mb-3 h-10 w-full max-w-lg" aria-hidden>
-      <svg className="h-full w-full text-muted-foreground/50" viewBox="0 0 320 40" fill="none">
-        <motion.path
-          d="M160 0 V12 M160 12 H40 V36 M160 12 H160 V36 M160 12 H280 V36"
-          stroke="currentColor"
-          strokeWidth="1"
-          initial={{ pathLength: 0, opacity: 0 }}
-          whileInView={{ pathLength: 1, opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.65, ease: 'easeOut' }}
-        />
-      </svg>
+    <div className="relative h-16 w-full md:h-20" aria-hidden>
+      {/* Horizontal bar: col1 center → col3 center */}
+      <div
+        className={cn('absolute top-[45%] h-px -translate-y-1/2', LINE)}
+        style={{
+          left: 'calc((100% - 1.5rem) / 6)',
+          right: 'calc((100% - 1.5rem) / 6)',
+        }}
+      />
+
+      <div className="grid h-full grid-cols-3 gap-3">
+        {/* ResumeIR stem (from horizontal down) */}
+        <div className="relative flex justify-center">
+          <div className={cn('absolute top-[45%] bottom-0 w-px', LINE)} />
+        </div>
+
+        {/* PortfolioIR stem */}
+        <div className="relative flex justify-center">
+          <div className={cn('absolute top-[45%] bottom-0 w-px', LINE)} />
+        </div>
+
+        {/* Knowledge → ConversationIR (full stem + arrow) */}
+        <div className="relative flex justify-center">
+          <div className={cn('absolute inset-y-0 w-px', LINE)} />
+          <span className="absolute top-[28%] text-[10px] leading-none text-primary">▼</span>
+        </div>
+      </div>
     </div>
   );
 }
@@ -96,7 +111,6 @@ export function Architecture() {
                 </h3>
                 <p className="mt-1.5 text-xs text-muted">{stage.detail}</p>
 
-                {/* Desktop connector between stages */}
                 {i < STAGES.length - 1 ? (
                   <span
                     className="pointer-events-none absolute -right-2 top-1/2 z-10 hidden -translate-y-1/2 text-muted-foreground/60 sm:block"
@@ -109,8 +123,7 @@ export function Architecture() {
             ))}
           </div>
 
-          <ArrowDown />
-          <FanOut />
+          <KnowledgeFanOut />
 
           {/* Layer 2 — Typed IRs */}
           <div className="grid gap-3 sm:grid-cols-3">

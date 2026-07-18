@@ -20,10 +20,9 @@ updated: "2026-07-18"
 
 ## Overview
 
-A **Python-native Code Knowledge Graph** for coding agents: Tree-sitter AST
-→ SQLite → in-memory [[rustworkx]] graph → **bidirectional Personalized
-PageRank** → [[fastmcp]] tools that return exact source blocks (not just
-symbol metadata).
+A Code Knowledge Graph for AI coding agents. Tree-sitter AST → SQLite →
+in-memory [[rustworkx]] graph → bidirectional Personalized PageRank →
+[[fastmcp]] tools that return exact source blocks (not just symbol metadata).
 
 One tunable `backward_weight` selects between two modes:
 
@@ -34,6 +33,12 @@ PyPI: `graphrag-code-core` · Repo: [github.com/bydecom/graphrag-code](https://g
 
 Not [Microsoft GraphRAG](https://github.com/microsoft/graphrag) — that
 indexes unstructured text; this indexes **code structure** for live agents.
+
+## Highlights
+
+- AST-derived knowledge graph (Tree-sitter + SQLite) with bidirectional Personalized PageRank via rustworkx (downstream deps + upstream blast radius).
+- LLM-free retrieval harness: Precision@10 ≈ 0.98 on real packages vs ≈ 0.27 unidirectional ablation.
+- Packaged as FastMCP (`plan_change`, `get_impact`, `get_context`) for Cursor / Claude Desktop, including structural dead-code signal.
 
 ## Demo
 

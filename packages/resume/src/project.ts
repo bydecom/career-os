@@ -27,7 +27,7 @@ const DEFAULTS = {
   scope: 'master' as ResumeScope,
   maxDecisions: 4,
   maxMetrics: 3,
-  maxSummaryChars: 400,
+  maxSummaryChars: 300,
 };
 
 function isNonEmpty(value: string | undefined | null): boolean {
@@ -91,7 +91,20 @@ function buildProfile(nodes: KnowledgeNode[]): ResumeProfile {
     linkedin: meta.linkedin,
     website: meta.website,
     summary,
+    specialties: extractBullets(node.body.raw, ['Specialties'], 8),
+    stacks: extractBullets(node.body.raw, ['Technical Stacks'], 16),
   };
+}
+
+function experienceProjectIds(graph: KnowledgeGraph, experienceId: string): string[] {
+  const ids = new Set<string>();
+  for (const edge of graph.edges) {
+    if (edge.sourceNode !== experienceId && edge.targetNode !== experienceId) continue;
+    const other = edge.sourceNode === experienceId ? edge.targetNode : edge.sourceNode;
+    const node = graph.nodes.find((n) => n.id === other && n.type === NodeType.Project);
+    if (node && node.metadata.status !== 'draft') ids.add(node.id);
+  }
+  return [...ids].sort(compareIdAsc);
 }
 
 function buildExperiences(graph: KnowledgeGraph): ResumeExperience[] {
@@ -109,6 +122,8 @@ function buildExperiences(graph: KnowledgeGraph): ResumeExperience[] {
         endDate: meta.endDate,
         team: meta.team,
         summary: extractSummary(n.body.raw, DEFAULTS.maxSummaryChars),
+        highlights: extractBullets(n.body.raw, ['Highlights', 'Key Decisions'], 6),
+        projectIds: experienceProjectIds(graph, n.id),
         _start: meta.startDate,
       };
     });
@@ -137,7 +152,11 @@ function buildProjects(
         role: meta.role,
         period: meta.period,
         summary: extractSummary(n.body.raw, options.maxSummaryChars),
-        keyDecisions: extractBullets(n.body.raw, ['Key Decisions'], options.maxDecisions),
+        keyDecisions: extractBullets(
+          n.body.raw,
+          ['Highlights', 'Engineering Decisions', 'Key Decisions'],
+          options.maxDecisions,
+        ),
         metrics: extractBullets(n.body.raw, ['Metrics'], options.maxMetrics),
         technologies: tech.names,
         _techIds: tech.ids,

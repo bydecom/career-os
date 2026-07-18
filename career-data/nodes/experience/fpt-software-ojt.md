@@ -14,25 +14,24 @@ employmentType: "full-time"
 startDate: "2026-01-01"
 endDate: "2026-06-30"
 created: "2026-06-01"
-updated: "2026-07-13"
+updated: "2026-07-18"
 ---
 
 ## Overview
 
-On-the-Job Training (OJT) placement at [[fpt-software]] as a Full-stack
-Developer. Delivered two production-shaped projects back to back: a
-Django-based movie theater web app (search/caching/frontend performance
-focus), followed by a full-stack e-commerce platform (AWS infra, AI
-integration, concurrency-safe payments/inventory).
+Completed two production-oriented full-stack systems during a six-month OJT
+program at [[fpt-software]], focusing on deployment automation, distributed
+system concerns, payment integration, caching, and AI-powered features —
+[[movie-theater-management-system]] (Jan–Mar 2026), then
+[[ecommerce-platform]] (Mar–Jun 2026) on real AWS infrastructure.
 
-## Key Decisions
+## Highlights
 
-- Treated the OJT as an opportunity to practice production-shaped concerns
-  (deploy pipelines, concurrency, observability) rather than just feature
-  delivery — most visible in the 12-round hardening process on the
-  e-commerce platform.
+- Treated OJT as practice for production concerns — deploy pipelines, concurrency, observability — not only feature delivery.
+- E-commerce: 132+ zero-downtime PM2 deploys, VNPay IPN, Redis stock holds, RabbitMQ AI workers, 53+ critical-path tests.
+- Movie theater: adaptive Postgres trigram search, Redis seat-map cache, React debounce/`AbortController` search UX.
 
 ## Evidence
 
 - [[movie-theater-management-system]] — Jan–Mar 2026
-- [[ecommerce-platform]] — Mar–Jun 2026, 132+ production deployments, 53+ tests on money/concurrency paths
+- [[ecommerce-platform]] — Mar–Jun 2026

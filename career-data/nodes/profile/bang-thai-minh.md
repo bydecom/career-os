@@ -6,34 +6,31 @@ schemaVersion: "1"
 tags:
   - profile
 status: active
-headline: "Knowledge Systems Engineer"
+headline: "Software Developer"
 location: "Ho Chi Minh City, Vietnam"
 email: "thaibang4903@gmail.com"
 github: "https://github.com/bydecom"
 linkedin: "https://www.linkedin.com/in/minh-bang-thai-742013378/"
 website: "https://d7ozoo9vtkn42.cloudfront.net/"
 created: "2026-07-14"
-updated: "2026-07-16"
+updated: "2026-07-18"
 ---
 
 ## Summary
 
-Build deterministic knowledge systems. Compile career knowledge into structured,
-reusable IR — then project Resume, Portfolio, and Interview surfaces from one graph.
-
-Interested in Knowledge Graphs, LLM runtime control planes, conversation management,
-compiler architecture, and evidence-first AI — systems where retrieval and structure
-come before generation.
+Software Developer focused on deterministic software systems and
+knowledge-driven AI applications. Experienced in building production-grade
+backend platforms, compiler-inspired architectures, and structured LLM
+pipelines. Interested in transforming complex domains into explicit runtime
+models that are testable, explainable, and maintainable.
 
 ## Specialties
 
-- Production-grade backend systems with Node.js, Express.js, TypeScript, async workers,
-  distributed locking, graceful shutdown and zero-downtime deployment.
-- Deterministic AI Engineering: LLM structured output orchestration, semantic vector
-  search (Qdrant), MCP server development, and strict hallucination prevention architectures.
-- Full-stack delivery across Angular 17, ReactJS — from API design to frontend integration.
-- Data processing and validation logic for complex domain problems (logistics, medical, e-commerce).
-- System thinking: translating unclear or high-level requirements into concrete, maintainable architecture.
+- Production-grade backend systems (Node.js, Express, TypeScript)
+- Deterministic AI engineering (Structured Output, RAG, Knowledge Graphs, MCP)
+- Distributed systems (Redis, RabbitMQ, asynchronous workflows)
+- Full-stack application architecture (Angular, React, REST APIs)
+- System design, runtime modeling, and compiler-inspired architectures
 
 ## Industry Experience
 
@@ -51,3 +48,15 @@ come before generation.
 - Testing: Jest, Vitest, pytest
 - AI / ML: Google Gemini API, Qdrant, scispacy NER, Tree-sitter AST, MCP
 - Methodology: Agile, Scrum
+
+## Experience
+
+- [[fpt-software-ojt]]
+- [[freelance-2025]]
+
+## Projects
+
+- [[career-os]] · [[graphrag-code]] · [[medical-citation-agent]] ·
+  [[conversational-state-machine]] · [[ecommerce-platform]] ·
+  [[movie-theater-management-system]] · [[container-bay-plan-validator]] ·
+  [[match-3-puzzle-game]]

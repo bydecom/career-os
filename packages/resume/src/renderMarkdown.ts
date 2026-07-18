@@ -28,6 +28,13 @@ export function renderMarkdown(ir: ResumeIR): string {
     lines.push('');
   }
 
+  if (profile.specialties.length > 0) {
+    lines.push('## Specialties');
+    lines.push('');
+    for (const s of profile.specialties) lines.push(`- ${s}`);
+    lines.push('');
+  }
+
   if (ir.experiences.length > 0) {
     lines.push('## Experience');
     lines.push('');
@@ -40,6 +47,10 @@ export function renderMarkdown(ir: ResumeIR): string {
       if (exp.summary) {
         lines.push('');
         lines.push(exp.summary);
+      }
+      if (exp.highlights.length > 0) {
+        lines.push('');
+        for (const h of exp.highlights) lines.push(`- ${h}`);
       }
       lines.push('');
     }
@@ -87,6 +98,13 @@ export function renderMarkdown(ir: ResumeIR): string {
     for (const edu of ir.education) {
       lines.push(`- **${edu.name}** (${edu.type})${edu.summary ? ` — ${edu.summary}` : ''}`);
     }
+    lines.push('');
+  }
+
+  if (profile.stacks.length > 0) {
+    lines.push('## Technical Stacks');
+    lines.push('');
+    for (const s of profile.stacks) lines.push(`- ${s}`);
     lines.push('');
   }
 

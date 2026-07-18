@@ -40,3 +40,4 @@ possible without a database lock.
 ## Used In
 
 - [[ecommerce-platform]] — checkout stock reservation (Lua script + TTL), refresh-token storage (hashed, rotated), JWT blacklist, rate-limiting store shared across a PM2 cluster, and the distributed lock guarding the reservation-cleanup loop
+- [[movie-theater-management-system]] — seat-map / seat-price cache, Redis TTL forgot-password tokens

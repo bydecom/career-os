@@ -21,7 +21,9 @@ export function extractSection(raw: string, titles: string[]): string {
 /** Prefer blockquote one-liner; else first paragraph. */
 export function extractSummary(raw: string, maxChars: number): string {
   const overview = extractSection(raw, ['Overview', 'Summary']);
-  const quote = overview.match(/^>\s*(?:Interview-friendly one-liner:\s*)?["']?(.+?)["']?\s*$/im);
+  const quote = overview.match(
+    /^>\s*(?:(?:Interview-friendly\s+)?[Oo]ne-liner:\s*)?[*_"']?(.+?)[*_"']?\s*$/im,
+  );
   let text = quote?.[1]?.trim() || overview.split(/\n\n+/)[0]?.trim() || '';
   text = stripWikiLinks(text).replace(/^>\s*/gm, '').replace(/\s+/g, ' ').trim();
   if (text.length > maxChars) {
@@ -33,13 +35,25 @@ export function extractSummary(raw: string, maxChars: number): string {
 export function extractBullets(raw: string, titles: string[], max: number): string[] {
   const section = extractSection(raw, titles);
   if (!section) return [];
-  const bullets = section
-    .split('\n')
-    .map((line) => line.match(/^\s*[-*]\s+(.+)$/)?.[1]?.trim())
-    .filter((x): x is string => Boolean(x))
+  const bullets: string[] = [];
+  let current: string | null = null;
+  for (const line of section.split('\n')) {
+    const item = line.match(/^\s*[-*]\s+(.+)$/);
+    if (item) {
+      if (current) bullets.push(current);
+      current = item[1]!.trim();
+      continue;
+    }
+    // Wrapped continuation of the previous bullet (common in CV markdown).
+    if (current && line.trim() && !/^#{1,6}\s/.test(line)) {
+      current = `${current} ${line.trim()}`;
+    }
+  }
+  if (current) bullets.push(current);
+  return bullets
     .map((b) => stripWikiLinks(b).replace(/\s+/g, ' ').trim())
-    .filter(Boolean);
-  return bullets.slice(0, max);
+    .filter(Boolean)
+    .slice(0, max);
 }
 
 export function stripWikiLinks(text: string): string {

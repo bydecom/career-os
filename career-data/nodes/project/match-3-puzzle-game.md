@@ -22,14 +22,22 @@ updated: "2026-07-18"
 
 ## Overview
 
-**Jungle Gems** — a mobile-style Match-3 built with [[phaser]] 3 + Vite.
-Mixin-style modular board (swap, match, gravity, refill, power-ups,
-boosters, blockers) and **data-driven** levels via JSON — extend levels,
-objectives, and mechanics without rewriting the core loop.
+A modular Match-3 game engine with data-driven level definitions and
+deterministic gameplay state transitions. Built with [[phaser]] 3 + Vite —
+mixin-style board modules (swap, match, gravity, refill, power-ups,
+boosters, blockers) and JSON levels so designers extend content without
+rewriting the core loop.
 
 Live: [match-3-two.vercel.app](https://match-3-two.vercel.app/)
 
 Built for an academic product from provided visual concepts (freelance).
+
+## Highlights
+
+- Data-driven level engine: boards, obstacles, and win constraints from JSON — zero-code level expansions.
+- Event Bus decouples GameScene (core logic) from UIScene (HUD rendering).
+- Board Facade orchestrates Matcher, Powerups, Input, and State modules.
+- Deterministic FSM for swap/cascade to prevent race conditions under rapid input.
 
 ## Demo
 

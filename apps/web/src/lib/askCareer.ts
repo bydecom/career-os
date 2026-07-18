@@ -64,19 +64,25 @@ export async function askCareerStream(
 
   const retriever = new Retriever(graph);
   const topK = 10;
-  const usedVector = Boolean(QDRANT_URL);
+  let usedVector = Boolean(QDRANT_URL);
 
   const retrieveStarted = Date.now();
   let outcome;
   if (usedVector) {
-    const embedder = new GeminiEmbedder({ apiKey: GEMINI_API_KEY });
-    const vectorIndex = new QdrantVectorIndex({
-      url: QDRANT_URL!,
-      apiKey: QDRANT_API_KEY || undefined,
-      collection: 'career-nodes',
-      vectorSize: 768,
-    });
-    outcome = await retriever.retrieveHybrid(q, embedder, vectorIndex, { topK });
+    try {
+      const embedder = new GeminiEmbedder({ apiKey: GEMINI_API_KEY });
+      const vectorIndex = new QdrantVectorIndex({
+        url: QDRANT_URL!,
+        apiKey: QDRANT_API_KEY || undefined,
+        collection: 'career-nodes',
+        vectorSize: 768,
+      });
+      outcome = await retriever.retrieveHybrid(q, embedder, vectorIndex, { topK });
+    } catch {
+      // Qdrant/embed unreachable — degrade to lexical so Interview still answers.
+      usedVector = false;
+      outcome = retriever.retrieve(q, { topK });
+    }
   } else {
     outcome = retriever.retrieve(q, { topK });
   }
@@ -183,7 +189,17 @@ export async function askCareerStream(
   emit({ stage: 'llm_start', provider: provider.name, model: provider.model, temperature, thinking });
 
   const llmStarted = Date.now();
-  const verbalized = await verbalize(ir, provider, { temperature, thinking });
+  let verbalized;
+  try {
+    verbalized = await verbalize(ir, provider, { temperature, thinking });
+  } catch (err) {
+    const raw = err instanceof Error ? err.message : 'LLM request failed';
+    throw new Error(
+      raw === 'fetch failed'
+        ? 'Gemini API unreachable (network/fetch failed). Check GEMINI_API_KEY and connectivity.'
+        : raw,
+    );
+  }
   const llmLatencyMs = Date.now() - llmStarted;
 
   emit({

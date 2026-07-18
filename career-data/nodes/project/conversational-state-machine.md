@@ -19,9 +19,9 @@ updated: "2026-07-18"
 
 ## Overview
 
-A **Dialogue Runtime Engine** — not a chatbot skin. Enterprise dialog
-patterns (context switching, slot filling, interruption policies,
-hold/resume) on an open, LLM-native stack.
+A Dialogue Runtime Engine implementing enterprise conversational patterns
+including context switching, interruption handling, slot filling, and
+deterministic task resumption on top of LLM-based NLU.
 
 Inspired by platforms such as Kore.ai / Voiceflow — **selective parity**,
 not a clone. Flows are data in [[sqlite]]; [[gemini-ai]] only fills slots
@@ -29,6 +29,12 @@ under catalog enums. One serializable `ContextObject` is the source of
 truth every turn.
 
 Repo: [github.com/bydecom/conversational-state-machine](https://github.com/bydecom/conversational-state-machine)
+
+## Highlights
+
+- Selective parity with enterprise dialog platforms — reverse-engineered interruption patterns onto an open LLM-native stack.
+- Four interruption policies as deterministic LIFO stack ops on one serializable ContextObject (`hold` / `finish` / `lock` / `discard`).
+- Slot-first detection with catalog enum–constrained Gemini structured output — no entity hallucination on cross-task switches.
 
 ## Demo
 

@@ -38,3 +38,4 @@ set of real DOM mutations needed.
 ## Used In
 
 - [[career-os]] — planned for the Portfolio frontend, the "IDE for Career" UI (`apps/web`, Phase 4)
+- [[movie-theater-management-system]] — React (TypeScript) storefront: search, seat selection, booking, payment, promotions

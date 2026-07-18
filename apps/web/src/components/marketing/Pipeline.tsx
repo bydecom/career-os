@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FileText, Cpu, Network } from 'lucide-react';
+import { Container } from '@/components/ui';
 
 type StageId = 'markdown' | 'compiler' | 'graph';
 
@@ -163,8 +164,8 @@ export function Pipeline({
   );
 
   return (
-    <section className="px-6 py-16 md:px-10 md:py-24">
-      <div className="mx-auto max-w-container">
+    <section className="py-16 md:py-24">
+      <Container>
         <p className="mb-3 font-mono text-xs uppercase tracking-widest text-primary">
           Signature · Pipeline
         </p>
@@ -313,7 +314,7 @@ export function Pipeline({
             </p>
           </div>
         </div>
-      </div>
+      </Container>
     </section>
   );
 }

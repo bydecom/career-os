@@ -43,18 +43,20 @@ export type ProjectDetailView = {
 const CURATED: Record<string, Omit<ProjectDetailView, 'id' | 'name' | 'role' | 'period' | 'technologies'>> = {
   'career-os': {
     capability: 'Knowledge Compiler',
-    tagline: 'Personal Knowledge Compiler',
+    tagline: 'Personal Knowledge Compiler — Markdown → Graph → projections',
     overview:
-      'CareerOS treats career knowledge as source code. Markdown nodes compile into a Knowledge Graph IR, then project into Resume, Portfolio, and Interview surfaces — without rewriting the story for each view.',
+      'CareerOS is a TypeScript monorepo knowledge compiler: six pure packages turn Markdown wiki-links into a Knowledge Graph IR, then project ResumeIR and stream Interview answers via hybrid PCR + Gemini verbalization (AI-as-view). Studio and Knowledge OS stay parked until a public URL exists.',
     problem:
-      'Engineers maintain parallel truths: a CV, a portfolio site, interview talking points, and scattered notes. Each rewrite drifts. Recruiters see polish; the author sees copy-paste debt.',
+      'Engineers maintain parallel truths — CV, portfolio, interview notes — that drift on every rewrite. Career knowledge needs one authorable source, a deterministic compile into a graph, and projections — not another CMS, and not an LLM acting as the database.',
     constraints: [
-      'Single authorable source in Markdown — no CMS admin UI in v1',
-      'Deterministic compile path before any LLM verbalization',
-      'Hire-first surfaces first; Studio / Dashboard deferred',
+      'Markdown-only authorable source in v1 — no CMS admin UI',
+      'packages/* I/O-free; CLI and services own filesystem',
+      'Deterministic compile + retrieve before any LLM verbalization',
+      'Hire-first surfaces first; Studio / Dashboard / Knowledge OS deferred',
     ],
     architecture: {
-      summary: 'Source → Compiler → Knowledge Graph IR → typed projections.',
+      summary:
+        'Markdown → Lexer/Parser/Ontology/Validator → Graph IR (JSON + SQLite) → ResumeIR / ConversationIR → Next hire surfaces + hybrid ask.',
       steps: [
         'Markdown nodes',
         'Lexer + Zod',
@@ -62,7 +64,7 @@ const CURATED: Record<string, Omit<ProjectDetailView, 'id' | 'name' | 'role' | '
         'Ontology',
         'Validator',
         'Graph IR',
-        'ResumeIR · PortfolioIR · ConversationIR',
+        'ResumeIR · ConversationIR',
         'Surfaces + Ask',
       ],
     },
@@ -70,63 +72,66 @@ const CURATED: Record<string, Omit<ProjectDetailView, 'id' | 'name' | 'role' | '
       {
         title: 'Knowledge as Source Code',
         description:
-          'Markdown is the only authorable source in v1. Compile before any LLM verbalization — AI-as-view, not AI-as-source.',
+          'Markdown is the only authorable source. Compile before any LLM call — AI-as-view (ADR-0007). Progressive Certainty Retrieval anchors facts before fuzzy search.',
       },
       {
-        title: 'Compiler Packages as Pure Libraries',
+        title: 'Six Pure Compiler Packages',
         description:
-          'packages/* stay I/O-free; apps/cli and services/* own the filesystem. Rebuild-from-source stays honest.',
+          'ontology · compiler · graph · graph-store · resume · conversation. Zero runtime I/O in packages; apps/cli and services/* own the filesystem.',
       },
       {
         title: 'Edges as Compiler Output',
         description:
-          'Wiki-links become graph edges — not hand-authored relationship tables.',
+          'Wiki-links become typed graph edges by section/ontology. No hand-authored edges folder — see knowledge/career-os/why-edges-are-compiler-output.md.',
       },
       {
         title: 'Typed Projections',
         description:
-          'One graph → ResumeIR, Portfolio / Project Detail, ConversationIR. Same facts, different shapes.',
+          'One graph → ResumeIR (live), Portfolio/Project Detail (curated → Narrative Projection), ConversationIR for Interview. Same facts, different shapes.',
       },
       {
-        title: 'Hybrid Retrieval for Interview',
+        title: 'Hybrid Retrieval + Execution Trace',
         description:
-          'Ask fuses metadata, BM25, Qdrant, and graph. Execution Trace shows real engine scores — not fake chain-of-thought.',
+          'Retriever fuses metadata + graph PPR + BM25 (+ optional Qdrant) via RRF. Interview shows real engine scores — not fake chain-of-thought.',
       },
       {
         title: 'Hire-first Product Surfaces',
         description:
-          'Landing + MarketingShell Project Detail for recruiters. Phase 2 waits for a public URL.',
+          'Landing 2-2-1 Featured · Portfolio · Project Detail (MarketingShell) · Resume · Interview /api/ask. Sibling projects prove the graph is real.',
       },
     ],
     decisions: [
-      'Edges are compiler output — wiki-links become graph edges, not hand-authored relationship tables.',
-      'Compiler packages stay pure libraries with zero runtime I/O — services own the filesystem.',
-      'Landing sells the product demo; deep ontology docs live under /project and /about.',
-      'Curated Product Cards until PortfolioIR lands — hire clarity over fully IR-driven Landing copy.',
+      'Edges are compiler output — wiki-links drive the graph (ADR-0002/0003).',
+      'Deterministic compile before LLM — evidence-backed generation (ADR-0007/0008).',
+      'Hybrid PCR + RRF — metadata → graph → BM25 → optional vector (ADR-0004/5/6).',
+      'Curated Product Cards until PortfolioIR — hire clarity over fully IR-driven Landing.',
+      'MarketingShell for Project Detail — recruiters never hit an auth wall.',
+      'Park Knowledge OS / Candidate KG — no implement before Deploy + reviewer pass.',
     ],
     tradeoffs: [
-      'Curated Product Cards on Landing vs fully IR-driven copy — chose curated for hire clarity until PortfolioIR lands.',
-      'MarketingShell for Project Detail vs AppShell — chose MarketingShell so recruiters never hit a login wall.',
-      'SQLite graph for v1 vs Neo4j/cluster — ops simplicity; scale later.',
-      'Park Knowledge OS / Candidate KG under docs/someday — no implement before Deploy + reviewer pass.',
+      'Curated Landing/Project Detail vs fully IR-driven narrative — owned hire clarity; Narrative Projection is someday.',
+      'ResumeIR shipped; career portfolio / PortfolioIR still next on roadmap.',
+      'Studio, Dashboard, MCP SaaS, PDF/Image ingest frozen until Hire Demo URL + apply loop.',
+      'SQLite graph for v1 vs Neo4j — ops simplicity; scale later.',
     ],
     timeline: [
-      '2026-07 — Vision, ADRs, ontology, monorepo compiler skeleton',
-      '2026-07 — ResumeIR + Landing IA (Hero → Pipeline → Architecture → Proof)',
-      'Next — Deploy → Reviewer → Apply; Phase 2 capabilities after URL exists',
+      '2026-07 — Vision, 10 ADRs, ontology (24 NodeTypes), monorepo compiler skeleton',
+      '2026-07 — ResumeIR + Landing IA + Interview Execution Trace + Featured depth',
+      'Next — Deploy public URL → reviewers → Apply; Phase 2 after hire loop',
     ],
-    metrics: ['Compiler stats from stats.json', '6 compiler packages', 'ResumeIR live'],
+    metrics: ['Compiler stats from stats.json', '6 compiler packages', '24 NodeTypes', 'ResumeIR live'],
     evidence: [
-      'docs/02-architecture — system + compiler + frontend lock',
-      'docs/01-adr — progressive certainty, hybrid retrieval, AI-as-view',
-      'career-data/nodes — authored source of truth',
-      'packages/* — deterministic compile libraries',
-      'Sibling proofs: GraphRAG-Code · Medical Citation Agent · Conversational State Machine',
+      'Implementation: packages/{ontology,compiler,graph,graph-store,resume,conversation} · apps/cli · apps/web · services/{embedding,retriever,llm}',
+      'Validation: npm run compile → stats.json · ResumeIR on /resume · POST /api/ask NDJSON stream',
+      'Measurement: live node/edge counts from stats.json · Execution Trace engine scores · 10 ADRs',
+      'Docs: docs/02-architecture · docs/01-adr · docs/00-vision/09-roadmap.md · hire-demo journal',
+      'https://github.com/bydecom/career-os',
     ],
     lessons: [
       'Domain-first folders beat tech-stack folders when knowledge is the product.',
-      'If Landing explains philosophy but not proof, recruiters bounce — Architecture + Featured Products close that gap.',
+      'If Landing explains philosophy but not proof, recruiters bounce — Architecture + Featured close that gap.',
       'Principle #0: job first — ship a recruiter-usable URL before platform sprawl.',
+      'AI-as-view is architecture: keep the LLM out of compile and out of retrieval ranking.',
     ],
     related: [
       'TypeScript',
@@ -136,18 +141,25 @@ const CURATED: Record<string, Omit<ProjectDetailView, 'id' | 'name' | 'role' | '
       'GraphRAG-Code',
       'Medical Citation Agent',
       'Conversational State Machine',
+      'E-Commerce Platform',
     ],
-    sources: ['career-data/nodes/project/career-os.md', 'docs/02-architecture/01-system-architecture.md'],
+    sources: [
+      'career-data/nodes/project/career-os.md',
+      'docs/02-architecture/01-system-architecture.md',
+      'docs/01-adr/0007-ai-is-a-view.md',
+    ],
     links: [
+      { label: 'GitHub', href: 'https://github.com/bydecom/career-os' },
       { label: 'Landing Architecture', href: '/#architecture' },
       { label: 'Portfolio', href: '/portfolio' },
+      { label: 'Interview', href: '/interview' },
     ],
   },
   'graphrag-code': {
     capability: 'Code Reasoning',
     tagline: 'Bidirectional PPR for blast radius — not another file dump',
     overview:
-      'Python-native Code Knowledge Graph: Tree-sitter → SQLite → rustworkx → bidirectional Personalized PageRank → FastMCP tools that return exact source blocks. One backward_weight selects downstream context vs upstream blast radius.',
+      'A Code Knowledge Graph for AI coding agents: Tree-sitter → SQLite → rustworkx → bidirectional Personalized PageRank → FastMCP tools that return exact source blocks. One backward_weight selects downstream context vs upstream blast radius.',
     problem:
       '“What breaks if I change this?” is structural and deterministic — yet agents still pay tokens to re-read the repo. Global/undirected Repo Maps boost utilities regardless of the seed. Agents need seeded, directed, bidirectional ranking plus real snippets.',
     constraints: [
@@ -719,6 +731,99 @@ const CURATED: Record<string, Omit<ProjectDetailView, 'id' | 'name' | 'role' | '
       { label: 'Play live', href: 'https://match-3-two.vercel.app/' },
       { label: 'Portfolio', href: '/portfolio' },
     ],
+  },
+  'movie-theater-management-system': {
+    capability: 'Booking Systems',
+    tagline: 'Seats, search, and short-lived tokens — not naive CRUD',
+    overview:
+      'FPT Software OJT: Django DRF + React movie ticket booking. Adaptive Postgres trigram search, Redis-cached seat maps, atomic booking with occupancy checks, JWT + Redis TTL password reset, Celery promo expiry. Split frontend/backend repos.',
+    problem:
+      'Ticket booking is concurrent inventory: seats race under load, search must feel instant on fuzzy titles, and password-reset tokens are ephemeral. Naive CRUD oversells, feels slow, or stores short-lived secrets as durable rows.',
+    constraints: [
+      'Postgres pg_trgm + adaptive similarity (not one fixed cutoff)',
+      'Atomic booking — reject occupied / unavailable seats in-transaction',
+      'Redis for cache + TTL reset tokens; Celery for promo expiry',
+      'React search UX: debounce + AbortController',
+    ],
+    architecture: {
+      summary:
+        'React Vite storefront → DRF (JWT) → Postgres + Redis; booking service atomic; Celery beat for promos; Mailpit in dev.',
+      steps: [
+        'Browse / search',
+        'Showtime',
+        'Seat map',
+        'Promo / food',
+        'Atomic book',
+        'Payment',
+        'Celery jobs',
+        'Admin (Unfold)',
+      ],
+    },
+    capabilities: [
+      {
+        title: 'Adaptive Trigram Search',
+        description:
+          'pg_trgm + GIN with query-length-aware similarity. Short queries use prefix (B-Tree); longer queries use fuzzy trigram.',
+      },
+      {
+        title: 'Search UX Hardening (React)',
+        description:
+          'Debounce + in-memory cache + AbortController cancel stale in-flight requests while the user types.',
+      },
+      {
+        title: 'Atomic Booking & Seat Map',
+        description:
+          'transaction.atomic create_booking: occupancy checks, seat-type pricing, promo/points/food lines. Seat maps cached in Redis with signal invalidation.',
+      },
+      {
+        title: 'Auth & Ephemeral Tokens',
+        description:
+          'SimpleJWT sessions; forgot-password tokens in Redis TTL — not durable DB rows. Mailpit catches mail in local/dev.',
+      },
+      {
+        title: 'Promotions & Celery Jobs',
+        description:
+          'Promo codes on booking; Celery beat expired_promotion_checker. seat_price:* cache busted via signals.',
+      },
+      {
+        title: 'Admin + Seed Tooling',
+        description:
+          'Unfold admin for theater ops. ETL: raw JSON → SQL seed scripts. Configuration helpers include optional Gemini assist.',
+      },
+    ],
+    decisions: [
+      'Adaptive similarity over one fixed cutoff — query shape drives matching.',
+      'Prefix for short queries — B-Tree speed when fuzzy is unnecessary.',
+      'Redis TTL tokens for password reset — ephemeral by design.',
+      'Atomic booking with explicit seat conflict checks — fail loud, no soft oversell.',
+      'Cache seat maps/prices for reads; occupancy truth stays in Postgres transactions.',
+    ],
+    tradeoffs: [
+      'Split FE/BE repos — clearer ownership; heavier local setup (Postgres, Redis, Mailpit, Celery, Vite).',
+      'Private OJT codebase — demo assets + narrative carry proof.',
+      'Celery solo pool on Windows for local workers vs multiprocess on Linux prod.',
+    ],
+    timeline: ['Jan–Mar 2026 — FPT Software OJT: search, booking, React storefront, Celery ops'],
+    metrics: [
+      'Adaptive trigram + prefix',
+      'Atomic seat booking',
+      'Redis seat-map cache',
+      'Celery promo expiry',
+    ],
+    evidence: [
+      'Implementation: movies · bookings · accounts · authentication · configuration; React Seat/Booking/Payment pages',
+      'Validation: occupied-seat rejection in create_booking · Redis seat-map hit · Mailpit reset loop',
+      'Measurement: debounce/AbortController search · adaptive similarity · Celery beat promo checker',
+      'Context: FPT Software OJT — precedes ecommerce hardening on the same placement arc',
+    ],
+    lessons: [
+      'Search relevance is not one threshold forever — query shape drives prefix vs trigram.',
+      'Cache serves hot reads; seat freeness is decided inside the booking transaction.',
+      'Ephemeral auth tokens belong in Redis TTL space, not forever rows.',
+    ],
+    related: ['Django', 'PostgreSQL', 'Redis', 'React', 'TypeScript', 'Celery', 'FPT Software'],
+    sources: ['career-data/nodes/project/movie-theater-management-system.md'],
+    links: [{ label: 'Portfolio', href: '/portfolio' }],
   },
 };
 

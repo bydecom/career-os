@@ -13,14 +13,21 @@ startDate: "2025-06-01"
 endDate: "2025-12-31"
 location: "Ho Chi Minh City, Vietnam"
 created: "2026-07-14"
-updated: "2026-07-14"
+updated: "2026-07-18"
 ---
 
 ## Overview
 
-Freelance delivery across two product tracks: a deterministic logistics desktop tool
-([[container-bay-plan-validator]]) and a Match-3 puzzle game prototype
-([[match-3-puzzle-game]]) for an academic product.
+Freelance delivery across logistics tooling and an academic game prototype:
+[[container-bay-plan-validator]] (Bay Checker) and [[match-3-puzzle-game]]
+(Jungle Gems).
+
+## Highlights
+
+- Bay Checker: Excel/PDF LOC → 2D/3D stowage grids, heavy-on-light rules,
+  PyInstaller offline ship for port ops.
+- Jungle Gems: Phaser 3 data-driven Match-3 (JSON levels, Board facade,
+  event-driven Game/UI scenes), live on Vercel.
 
 ## Evidence
 

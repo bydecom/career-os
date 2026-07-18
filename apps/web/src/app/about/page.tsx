@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { MarketingShell } from '@/components/shell/MarketingShell';
 import { Architecture } from '@/components/marketing/Architecture';
 import { Pipeline } from '@/components/marketing/Pipeline';
+import { Container } from '@/components/ui';
 import { loadGraphStats } from '@/lib/loadGenerated';
 
 export default function AboutPage() {
@@ -10,24 +11,32 @@ export default function AboutPage() {
   return (
     <MarketingShell>
       <main>
-        <div className="mx-auto max-w-container px-6 pt-16 md:px-10">
-          <Link href="/" className="text-sm text-muted hover:text-foreground">
+        <Container className="py-16 md:py-20">
+          <Link href="/" className="text-sm text-muted transition hover:text-foreground">
             ← CareerOS
           </Link>
-          <h1 className="mt-6 text-4xl font-semibold tracking-tight">About CareerOS</h1>
-          <p className="mt-4 max-w-2xl text-muted">
-            CareerOS is a personal knowledge compiler. Markdown is source. The graph is IR. Resume,
-            Portfolio, and Interview AI are projections — not separate content stores.
-          </p>
-        </div>
+
+          <header className="mt-8 max-w-2xl">
+            <p className="font-mono text-xs uppercase tracking-widest text-primary">About</p>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight md:text-4xl">
+              About CareerOS
+            </h1>
+            <p className="mt-3 text-sm text-muted md:text-base">
+              CareerOS is a personal knowledge compiler. Markdown is source. The graph is IR.
+              Resume, Portfolio, and Interview AI are projections — not separate content stores.
+            </p>
+          </header>
+        </Container>
+
         <Pipeline stats={stats} />
         <Architecture />
-        <div className="mx-auto max-w-container px-6 pb-20 md:px-10">
+
+        <Container className="pb-20">
           <p className="text-sm text-muted">
             Read the architecture docs in the repo:{' '}
             <code className="font-mono text-xs text-primary">docs/02-architecture/</code>
           </p>
-        </div>
+        </Container>
       </main>
     </MarketingShell>
   );

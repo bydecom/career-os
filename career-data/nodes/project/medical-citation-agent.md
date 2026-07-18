@@ -30,6 +30,12 @@ different domain (regulated text vs code structure).
 
 Repo: [github.com/bydecom/medical-citation-agent](https://github.com/bydecom/medical-citation-agent)
 
+## Highlights
+
+- Deterministic extraction (regex + scispacy NER) from OpenFDA SPL with exact line-level citations — LLMs stay out of the extraction path.
+- Citation Precision 1.00 and Hallucination Rate 0.00 across 15 curated clinical cases; 96 regression tests in GitHub Actions CI.
+- Rule-based SafetyGuardrail blocks critical drug–condition pairs lacking explicit contraindication phrasing.
+
 ## Demo
 
 ![[cover.png|caption=Medical Citation Agent]]

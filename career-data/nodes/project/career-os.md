@@ -10,25 +10,35 @@ tags:
   - personal-project
   - knowledge-compiler
   - typescript
+  - monorepo
 status: active
 role: "Full-stack Engineer & Architect"
 period: "Jul/2026 - Present"
 visibility: public
 created: "2026-07-01"
 updated: "2026-07-18"
+repository: "https://github.com/bydecom/career-os"
 ---
 
 ## Overview
 
-CareerOS is a **Personal Knowledge Compiler**. Markdown nodes are the source
-code; the compiler builds a Knowledge Graph IR; typed projections power
-Resume, Portfolio, and Interview — without rewriting the story for each
-surface.
+CareerOS is a Personal Knowledge Compiler where Markdown serves as the single
+source of truth. A modular [[typescript]] compiler transforms knowledge into
+a typed Knowledge Graph, from which Resume, Portfolio, and Interview
+experiences are generated automatically.
 
-Hire-first demo first: Landing → Project Detail → Resume → Deploy. Studio /
-Dashboard stay deferred until a public URL exists.
+Hire-first demo first (Landing → Project Detail → Resume → Deploy). Studio,
+Dashboard, and Knowledge OS stay parked until a public URL exists
+(Principle #0: job first).
 
-Repo: this monorepo (`career-knowledge-base`).
+Repo: [github.com/bydecom/career-os](https://github.com/bydecom/career-os)
+(monorepo `career-knowledge-base`).
+
+## Highlights
+
+- Modular TypeScript compiler: Markdown wiki-links → typed Knowledge Graph IR (JSON + SQLite); packages stay I/O-free.
+- ResumeIR and Interview `/api/ask` — hybrid PCR retrieval + Gemini verbalization; Execution Trace shows real engine scores.
+- Hire-first surfaces (Landing, Portfolio, Project Detail, Resume); Studio / Knowledge OS parked until a public URL exists.
 
 ## Demo
 
@@ -40,89 +50,121 @@ Repo: this monorepo (`career-knowledge-base`).
 
 Engineers maintain parallel truths: a CV, a portfolio site, interview talking
 points, and scattered notes. Each rewrite drifts. Recruiters see polish; the
-author sees copy-paste debt. Career knowledge needs a **single authorable
-source** and **deterministic projections**, not another CMS.
+author sees copy-paste debt.
+
+Career knowledge needs a **single authorable source**, a **deterministic
+compile** into a graph, and **projections** — not another admin UI that
+becomes a second source of truth. The LLM may verbalize answers; it must
+never become the database.
 
 ## Runtime Pipeline
 
-1. Author Markdown nodes under `career-data/nodes/` (wiki-links = edges)
-2. Lexer — frontmatter + body split ([[zod]] schemas)
+1. Author Markdown under `career-data/nodes/` — wiki-links become edges
+2. Lexer — frontmatter + body ([[zod]] schemas)
 3. Parser — [[unified]] / [[remark]] AST + wiki-link extraction
-4. Ontology / Semantic Analyzer — typed nodes, edge inference by section
+4. Ontology — 24 `NodeType` / 18 `EdgeType` taxonomy; section-aware edge typing
 5. Validator — schema + orphan diagnostics
-6. Graph IR — `graph.json` + [[sqlite]] `graph.db`
-7. Projections — ResumeIR · PortfolioIR · ConversationIR
-8. Surfaces — Landing, `/project/[id]`, `/resume`, Interview `/api/ask`
-   (hybrid retrieval: metadata + BM25 + [[qdrant]] + graph)
+6. Builder — Knowledge Graph IR → `graph.json` + [[sqlite]] `graph.db`
+7. Projections — ResumeIR (shipped) · Portfolio / Narrative (curated → IR) ·
+   ConversationIR (Interview)
+8. Surfaces — Next.js hire demo + `POST /api/ask` hybrid retrieve → Gemini
+   verbalize (AI-as-view)
+
+CLI twin: `career compile` · `career resume` · `career ask` · `career query`.
 
 ## Core Capabilities
 
 ### Knowledge as Source Code
 
-Markdown is the only authorable source in v1 — no CMS admin UI. Compile
-before any LLM verbalization (AI-as-view, not AI-as-source).
+Markdown is the only authorable source in v1 — no CMS. Compile before any
+LLM call (**AI-as-view**, ADR-0007). Progressive Certainty Retrieval
+(ADR-0004): anchor facts before fuzzy search.
 
-### Compiler Packages as Pure Libraries
+### Six Pure Compiler Packages
 
-`packages/*` stay I/O-free; `apps/cli` and `services/*` own the filesystem
-and runtime. Rebuild-from-source stays honest.
+| Package | Role |
+|---------|------|
+| `@career-os/ontology` | Domain model — NodeType / EdgeType / Zod |
+| `@career-os/compiler` | Markdown → KnowledgeGraph IR |
+| `@career-os/graph` | Pure algos (adjacency, PPR, traversal) |
+| `@career-os/graph-store` | SQLite persistence for compiled IR |
+| `@career-os/resume` | Graph → ResumeIR → Markdown (no LLM) |
+| `@career-os/conversation` | ConversationIR, confidence, budget, prompts |
+
+`packages/*` stay I/O-free; `apps/cli` and `services/*` own the filesystem.
 
 ### Edges as Compiler Output
 
-Wiki-links become graph edges — not hand-authored relationship tables. See
+Wiki-links become graph edges — classified by section/ontology. No hand-
+authored `career-data/edges/` table. See
 `knowledge/career-os/why-edges-are-compiler-output.md`.
 
 ### Typed Projections
 
-One graph → ResumeIR (printable CV), Portfolio / Project Detail narrative,
-ConversationIR for Interview ask. Same facts, different shapes.
+One graph → many shapes. ResumeIR is live (`/resume`, `/resume/markdown`,
+`/resume/ir`). Portfolio / Project Detail use curated Narrative depth until
+PortfolioIR (Narrative Projection) lands. ConversationIR drives Interview.
 
-### Hybrid Retrieval for Interview
+### Hybrid Retrieval + Execution Trace
 
-Ask path fuses metadata, BM25, vector ([[qdrant]]), and graph — Execution
-Trace shows real engine scores, not fake chain-of-thought.
+`services/retriever` fuses metadata + graph PPR + BM25 (+ optional
+[[qdrant]]) via RRF. Embedding via Gemini; verbalize via `services/llm`
+only after IR + budget. Interview UI shows **Execution Trace** (real engine
+scores) — not fake chain-of-thought.
 
 ### Hire-first Product Surfaces
 
-Landing sells the demo (Architecture + Featured Products); Project Detail
-uses MarketingShell so recruiters never hit a login wall. Phase 2
-capabilities wait for a public URL.
+Landing (Hero → Pipeline → Architecture → Featured 2-2-1) · `/portfolio` ·
+`/project/[id]` (MarketingShell, no login wall) · `/resume*` · `/interview`
+· `POST /api/ask` (NDJSON stream). Featured cards prove sibling systems:
+[[graphrag-code]], [[medical-citation-agent]],
+[[conversational-state-machine]], [[ecommerce-platform]].
 
 ## Engineering Decisions
 
-- **Edges are compiler output** — wiki-links drive the graph.
-- **Deterministic compile before LLM** — progressive certainty; retrieval
-  ranks evidence, model verbalizes after.
-- **Curated Product Cards until PortfolioIR lands** — hire clarity over
-  fully IR-driven Landing copy.
-- **MarketingShell for Project Detail** — no auth wall for recruiters.
-- **[[typescript]] + [[nodejs]] monorepo** — one language across compiler,
-  web, and services.
+- **Edges are compiler output** — wiki-links drive the graph (ADR-0002/0003).
+- **Deterministic compile before LLM** — evidence-backed generation
+  (ADR-0007/0008); model verbalizes ranked evidence only.
+- **Hybrid PCR + RRF** — metadata anchor → graph expand → BM25 → optional
+  vector (ADR-0004/0005/0006).
+- **Curated Product Cards until PortfolioIR** — hire clarity over fully
+  IR-driven Landing copy.
+- **MarketingShell for Project Detail** — recruiters never hit an auth wall.
+- **SQLite graph for v1** — rebuild-from-source, low ops; Neo4j later if needed.
+- **Park Knowledge OS / Candidate KG** under `docs/someday/` +
+  `journal/.../future-knowledge-os.md` — do not implement before Deploy +
+  reviewer pass.
 
 ## Tradeoffs
 
-- Curated Landing copy vs fully IR-driven marketing — owned clarity for
-  hire-demo; IR-driven narrative is the someday path.
-- SQLite graph for v1 vs Neo4j/cluster — ops simplicity; scale later.
-- Park Knowledge OS / Candidate KG platform docs under `docs/someday/` —
-  do not implement before Deploy + reviewer pass.
+- Curated Landing / Project Detail vs fully IR-driven narrative — owned
+  clarity for hire-demo; Narrative Projection is the someday path.
+- ResumeIR shipped; `career portfolio` / PortfolioIR still next on roadmap.
+- Studio, Dashboard `/app`, MCP SaaS, PDF/Image ingest — Product milestones
+  4–6; frozen until Hire Demo URL + apply loop.
+- Graph stats on UI hydrate from `stats.json` after `npm run compile` —
+  never hand-edited node/edge counts.
 
 ## Evidence
 
-- Implementation: `packages/compiler` · ontology · ResumeIR · Interview
-  ask + Execution Trace · Project Detail curated depth
-- Validation: `npm run compile` — nodes/edges/diagnostics; ResumeIR live
-  on `/resume`
-- Measurement: authored nodes under `career-data/nodes/` · 6 compiler
-  packages · Featured Products prove GraphRAG / Medical / CSM sibling work
-- Docs: `docs/02-architecture` · `docs/01-adr` · `docs/00-vision/09-roadmap.md`
+- Implementation: 6 packages · `apps/cli` · `apps/web` · embedding /
+  retriever / llm services · Interview Execution Trace · Featured 5-card
+  layout
+- Validation: `npm run compile` → nodes/edges/diagnostics; ResumeIR on
+  `/resume`; `career ask` / `/api/ask` grounded answers
+- Measurement: live `stats.json` (nodes · edges · parseTimeMs) · 24 ontology
+  node types · 10 ADRs under `docs/01-adr/`
+- Docs: `docs/02-architecture` · `docs/00-vision/09-roadmap.md` · hire-demo
+  journal
 
 Stack: [[typescript]], [[nodejs]], [[unified]], [[remark]], [[zod]],
-[[react]], [[sqlite]], [[qdrant]], [[rabbitmq]] (pipeline events),
-[[gemini-ai]] (Interview verbalization)
+[[react]], Next.js, [[sqlite]], [[qdrant]], [[rabbitmq]] (pipeline events),
+[[gemini-ai]]
 
 Sibling proofs: [[graphrag-code]] · [[medical-citation-agent]] ·
-[[conversational-state-machine]]
+[[conversational-state-machine]] · [[ecommerce-platform]] ·
+[[container-bay-plan-validator]] · [[match-3-puzzle-game]] ·
+[[movie-theater-management-system]]
 
 ## Lessons Learned
 
@@ -130,3 +172,5 @@ Sibling proofs: [[graphrag-code]] · [[medical-citation-agent]] ·
 - If Landing explains philosophy but not proof, recruiters bounce —
   Architecture + Featured Products close that gap.
 - Principle #0: job first — ship a recruiter-usable URL before platform sprawl.
+- AI-as-view is an architecture choice: keep the LLM out of the compile path
+  and out of retrieval ranking; let it speak only after evidence is fixed.
