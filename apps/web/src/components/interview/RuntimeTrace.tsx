@@ -5,6 +5,7 @@ import { cn } from '@/lib/utils';
 import type { AskResult, EngineMatch, FusedMatch } from '@/lib/askTypes';
 import { GraphTraversal } from './graph/GraphTraversal';
 import { typeLabel } from './graph/typeColors';
+import { KnowledgeTracePanel } from './KnowledgeTracePanel';
 
 function label(type: string) {
   return typeLabel(type);
@@ -45,13 +46,23 @@ function Box({
   );
 }
 
-function MatchList({ matches, showMatch }: { matches: EngineMatch[]; showMatch?: boolean }) {
+function MatchList({
+  matches,
+  showMatch,
+  max = 5,
+}: {
+  matches: EngineMatch[];
+  showMatch?: boolean;
+  max?: number;
+}) {
   if (matches.length === 0) {
     return <p className="font-mono text-[11px] text-muted-foreground">No matches.</p>;
   }
+  const visible = matches.slice(0, max);
+  const remaining = matches.length - visible.length;
   return (
     <ul className="space-y-1.5">
-      {matches.map((m) => (
+      {visible.map((m) => (
         <li key={m.nodeId} className="flex items-baseline justify-between gap-2 font-mono text-[11px]">
           <span className="min-w-0 truncate text-foreground">
             {label(m.type)}.{m.name}
@@ -61,6 +72,9 @@ function MatchList({ matches, showMatch }: { matches: EngineMatch[]; showMatch?:
           </span>
         </li>
       ))}
+      {remaining > 0 ? (
+        <li className="font-mono text-[10px] text-muted-foreground">+{remaining} more</li>
+      ) : null}
     </ul>
   );
 }
@@ -238,6 +252,15 @@ export function RuntimeTrace({
             <dd className="mt-0.5 text-foreground">{inspection.edges.length}</dd>
           </div>
         </dl>
+        {inspection.knowledgeTrace ? (
+          <Box
+            title="Knowledge Used"
+            meta={`${inspection.knowledgeTrace.directMatches.length} direct · ${inspection.knowledgeTrace.supportingContext.length} supporting`}
+            defaultOpen
+          >
+            <KnowledgeTracePanel trace={inspection.knowledgeTrace} />
+          </Box>
+        ) : null}
         <Box title="Raw IR (JSON)">
           <pre className="max-h-64 overflow-auto whitespace-pre-wrap font-mono text-[10px] leading-relaxed text-muted">
             {JSON.stringify(inspection.irRaw, null, 2)}

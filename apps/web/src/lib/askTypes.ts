@@ -33,6 +33,25 @@ export type FusedMatch = {
   selected: boolean;
 };
 
+/** A node in the Knowledge Trace presentation projection. */
+export type KnowledgeTraceNode = {
+  id: string;
+  type: string;
+  name: string;
+  score: number;
+  engines: string[];
+};
+
+/**
+ * Curated "Knowledge Used" view — Direct Matches = metadata anchors,
+ * Supporting = other selected evidence, Additional = overflow (disclosed, not hidden).
+ */
+export type KnowledgeTrace = {
+  directMatches: KnowledgeTraceNode[];
+  supportingContext: KnowledgeTraceNode[];
+  additionalContext: { count: number; names: string[] };
+};
+
 /**
  * Emitted live as the runtime executes each stage — powers the Execution
  * Trace. Every payload is real data pulled straight from the retriever /
@@ -59,6 +78,7 @@ export type StageEvent =
       tokenBudgetHint: number;
       citations: string[];
       raw: unknown;
+      knowledgeTrace: KnowledgeTrace;
     }
   | { stage: 'prompt'; system: string; user: string; rendered: string; chars: number; estTokens: number }
   | { stage: 'llm_start'; provider: string; model: string; temperature: number; thinking: string }
@@ -81,6 +101,7 @@ export type AskResult = {
   intent?: string;
   confidence?: number;
   confidenceLabel?: string;
+  knowledgeTrace?: KnowledgeTrace;
   selectedNodes: AskNode[];
   edges: AskEdge[];
   metadata: EngineMatch[];
@@ -148,6 +169,7 @@ export function applyStageEvent(prev: AskResult, event: StageEvent): AskResult {
         tokenBudgetHint: event.tokenBudgetHint,
         citations: event.citations,
         irRaw: event.raw,
+        knowledgeTrace: event.knowledgeTrace,
       };
     case 'prompt':
       return {

@@ -2,7 +2,7 @@ import { resolve } from 'path';
 import { existsSync } from 'fs';
 import { loadGraph, Retriever, QdrantVectorIndex } from '@career-os/retriever';
 import { GeminiEmbedder } from '@career-os/embedding';
-import { applyBudget, buildConversationIR, formatConfidenceLabel, promptRenderer } from '@career-os/conversation';
+import { applyBudget, buildConversationIR, buildKnowledgeTrace, formatConfidenceLabel, promptRenderer } from '@career-os/conversation';
 import { createProvider, verbalize, VERBALIZE_SYSTEM_PROMPT } from '@career-os/llm';
 import type { KnowledgeGraph, KnowledgeNode } from '@career-os/ontology';
 import type { EngineMatch, FusedMatch, StageEvent } from './askTypes';
@@ -91,6 +91,7 @@ export async function askCareerStream(
   const ir = applyBudget(buildConversationIR(q, outcome.results, graph, { topK }), {
     topK: Math.min(topK, 8),
   });
+  const knowledgeTrace = buildKnowledgeTrace(ir.candidateNodes, ir.anchorNodes);
 
   const metadataMatches: EngineMatch[] = outcome.retrieval.metadata.map((m) => ({
     nodeId: m.nodeId,
@@ -160,6 +161,7 @@ export async function askCareerStream(
     tokenBudgetHint: ir.tokenBudgetHint,
     citations: ir.candidateNodes.slice(0, 6).map((n) => `${n.type}.${n.id}`),
     raw: ir,
+    knowledgeTrace,
   });
 
   const packageMarkdown = promptRenderer.toMarkdown(ir);
