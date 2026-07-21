@@ -71,3 +71,10 @@ export interface VerbalizeResult {
   model: string;
   usage?: LlmUsage;
 }
+
+/** Prior turn for multi-turn verbalize / intent planner (not new facts). */
+export interface RecentTurn {
+  question: string;
+  answer: string;
+}
+

@@ -31,7 +31,7 @@
     "qdrant:up": "docker compose up -d qdrant",
     "qdrant:down": "docker compose down",
     "benchmark:retrieval": "node scripts/benchmark-retrieval.mjs",
-    "test": "npm run test --workspace=packages/compiler && npm run test --workspace=packages/graph && npm run test --workspace=packages/graph-store && npm run test --workspace=packages/conversation && npm run test --workspace=packages/resume && npm run test --workspace=services/embedding && npm run test --workspace=services/retriever && npm run test --workspace=services/llm"
+    "test": "npm run test --workspace=packages/compiler && npm run test --workspace=packages/graph && npm run test --workspace=packages/graph-store && npm run test --workspace=packages/conversation && npm run test --workspace=packages/resume && npm run test --workspace=services/embedding && npm run test --workspace=services/retriever && npm run test --workspace=services/llm && npm run test --workspace=apps/web"
   },
   "keywords": [],
   "author": "Bang Thai Minh",

@@ -13,6 +13,9 @@
 export type RetrievalEngine = 'metadata' | 'graph' | 'bm25' | 'vector' | 'context';
 
 export const ENGINE_WEIGHTS: Record<RetrievalEngine, number> = {
+  // Order of certainty (ADR-0004/0006 + session context):
+  //   metadata(4.0) > context(3.5) > graph(3.0) > bm25/vector(1.0)
+  // New engines MUST document where they sit in this order — do not invent weights ad hoc.
   metadata: 4.0,
   /**
    * Session carry-over focus. Must outrank graph expansion of the same seed

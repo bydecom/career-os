@@ -7,6 +7,9 @@ import {
   buildConversationIR,
   buildKnowledgeTrace,
   formatConfidenceLabel,
+  formatInterviewIntent,
+  getRetrievalProfile,
+  InterviewIntent,
   promptRenderer,
 } from '@career-os/conversation';
 import {
@@ -14,14 +17,21 @@ import {
   verbalize,
   VERBALIZE_SYSTEM_PROMPT,
   buildVerbalizeUserPrompt,
+  classifyIntentByLlm,
+  getNarrativeTemplate,
 } from '@career-os/llm';
 import type { KnowledgeGraph, KnowledgeNode } from '@career-os/ontology';
 import type { EngineMatch, FusedMatch, StageEvent } from './askTypes';
-import { detectContinuation, sessionContextStore } from './sessionContext';
+import {
+  accumulateSessionKnowledge,
+  detectContinuation,
+  sessionContextStore,
+} from './sessionContext';
+import { classifyIntentByRule, resolveInterviewIntent } from './intentClassifier';
+import { buildQueryPlan } from './knowledgeQueryBuilder';
 
 const ROOT = resolve(process.cwd(), '../..');
 const GRAPH_PATH = resolve(ROOT, 'career-data/generated/graph.json');
-const DEFAULT_INTENT = 'Project Explanation';
 
 function ensureEnv(): void {
   try {
@@ -29,27 +39,6 @@ function ensureEnv(): void {
   } catch {
     // optional — keys may already be in process.env
   }
-}
-
-function inferIntent(question: string): string {
-  const q = question.toLowerCase();
-  if (/hallucin|evidence|invent|fake|true/.test(q)) return 'Evidence / Certainty';
-  if (/architect|how does|pipeline|compile|ir\b/.test(q)) return 'Architecture Explanation';
-  if (/compare|vs|versus|difference|so với|so sánh/.test(q)) return 'Comparison';
-  if (/skill|tech|stack|typescript|python|redis/.test(q)) return 'Skill Deep-dive';
-  return DEFAULT_INTENT;
-}
-
-function resolveIntent(
-  question: string,
-  isContinuation: boolean,
-  lastIntent: string | undefined,
-): string {
-  const inferred = inferIntent(question);
-  if (isContinuation && inferred === DEFAULT_INTENT && lastIntent) {
-    return lastIntent;
-  }
-  return inferred;
 }
 
 function nodeLookup(graph: KnowledgeGraph): (id: string) => KnowledgeNode<any> | undefined {
@@ -62,6 +51,10 @@ function nodeLookup(graph: KnowledgeGraph): (id: string) => KnowledgeNode<any> |
  * StageEvent as each stage completes so the caller can stream progress live
  * instead of waiting for the whole pipeline to finish. Every field emitted is
  * real data produced by the pipeline — no simulated "thinking" text.
+ *
+ * Router path (ADR-0004): rule classifier → RetrievalProfile → QueryPlan →
+ * one hybrid retrieve → budget → intent narrative → verbalize → session update.
+ * LLM never chooses what to retrieve next.
  */
 export async function askCareerStream(
   question: string,
@@ -90,7 +83,7 @@ export async function askCareerStream(
 
   const prevContext = sessionContextStore.get(sessionId);
   const retriever = new Retriever(graph);
-  const topK = 10;
+  const retrieveTopK = 10;
   let usedVector = Boolean(QDRANT_URL);
 
   // Decide continuation BEFORE retrieve/hybrid so we never double-embed.
@@ -99,6 +92,50 @@ export async function askCareerStream(
     prevContext?.focusNodeIds.length && detectContinuation(q, anchors.length),
   );
   const carryOverNodeIds = isContinuation ? prevContext!.focusNodeIds : undefined;
+
+  const ruleContext = {
+    hasMetadataAnchor: anchors.length > 0,
+    isContinuation,
+    lastIntent: prevContext?.lastIntent,
+  };
+
+  // Provider early — needed if rule classifier returns null (Phase 5 fallback).
+  const provider = createProvider({ provider: 'gemini', apiKey: GEMINI_API_KEY });
+  const recentTurns = prevContext?.recentTurns.map((t) => ({
+    question: t.question,
+    answer: t.answer,
+  }));
+
+  let llmFallbackIntent: InterviewIntent | null = null;
+  const ruled = classifyIntentByRule(q, ruleContext);
+  if (ruled === null) {
+    const llmResult = await classifyIntentByLlm(q, recentTurns ?? [], provider);
+    // Validate optional entity against real metadata — never trust LLM entity alone.
+    if (llmResult.entity) {
+      const entityHits = retriever.checkAnchors(llmResult.entity);
+      if (entityHits.length === 0) {
+        // Drop unvalidated entity; intent still usable.
+      }
+    }
+    llmFallbackIntent = llmResult.needClarification
+      ? InterviewIntent.CLARIFICATION
+      : llmResult.intent;
+  }
+
+  const intent = resolveInterviewIntent(q, ruleContext, llmFallbackIntent);
+  const profile = getRetrievalProfile(intent);
+  const plan = buildQueryPlan(
+    q,
+    profile,
+    carryOverNodeIds,
+    prevContext?.recruiterInterest,
+  );
+
+  const retrieveOpts = {
+    topK: retrieveTopK,
+    carryOverNodeIds: plan.carryOverNodeIds,
+    nodeTypeFilter: plan.nodeTypeFilters.length > 0 ? plan.nodeTypeFilters : undefined,
+  };
 
   const retrieveStarted = Date.now();
   let outcome;
@@ -111,25 +148,24 @@ export async function askCareerStream(
         collection: 'career-nodes',
         vectorSize: 768,
       });
-      outcome = await retriever.retrieveHybrid(q, embedder, vectorIndex, {
-        topK,
-        carryOverNodeIds,
-      });
+      outcome = await retriever.retrieveHybrid(plan.entityQuery, embedder, vectorIndex, retrieveOpts);
     } catch {
       // Qdrant/embed unreachable — degrade to lexical so Interview still answers.
       usedVector = false;
-      outcome = retriever.retrieve(q, { topK, carryOverNodeIds });
+      outcome = retriever.retrieve(plan.entityQuery, retrieveOpts);
     }
   } else {
-    outcome = retriever.retrieve(q, { topK, carryOverNodeIds });
+    outcome = retriever.retrieve(plan.entityQuery, retrieveOpts);
   }
   const retrieveLatencyMs = Date.now() - retrieveStarted;
 
-  const ir = applyBudget(buildConversationIR(q, outcome.results, graph, { topK }), {
-    topK: Math.min(topK, 8),
+  // Single protected cut: builder keeps retrieve window; applyBudget enforces profile topK.
+  const ir = applyBudget(buildConversationIR(q, outcome.results, graph, { topK: retrieveTopK }), {
+    topK: profile.budget.topK,
+    maxChars: profile.budget.maxChars,
   });
   const knowledgeTrace = buildKnowledgeTrace(ir.candidateNodes, ir.anchorNodes);
-  const intent = resolveIntent(q, isContinuation, prevContext?.lastIntent);
+  const intentLabel = formatInterviewIntent(intent);
 
   const metadataMatches: EngineMatch[] = outcome.retrieval.metadata.map((m) => ({
     nodeId: m.nodeId,
@@ -164,7 +200,7 @@ export async function askCareerStream(
     type: String(r.node.type),
     score: r.explanation.score,
     engines: r.explanation.engines,
-    selected: selectedIds.has(r.node.id) && index < topK,
+    selected: selectedIds.has(r.node.id) && index < retrieveTopK,
   }));
 
   emit({
@@ -193,7 +229,7 @@ export async function askCareerStream(
 
   emit({
     stage: 'ir',
-    intent,
+    intent: intentLabel,
     confidence: ir.confidence,
     confidenceLabel: formatConfidenceLabel(ir.confidence),
     tokenBudgetHint: ir.tokenBudgetHint,
@@ -203,11 +239,8 @@ export async function askCareerStream(
     isContinuation,
   });
 
-  const recentTurns = prevContext?.recentTurns.map((t) => ({
-    question: t.question,
-    answer: t.answer,
-  }));
-  const userPrompt = buildVerbalizeUserPrompt(ir, recentTurns);
+  const narrativeTemplate = getNarrativeTemplate(profile.promptTemplate);
+  const userPrompt = buildVerbalizeUserPrompt(ir, recentTurns, narrativeTemplate);
   const packageMarkdown = promptRenderer.toMarkdown(ir);
 
   emit({
@@ -219,7 +252,6 @@ export async function askCareerStream(
     estTokens: Math.round(userPrompt.length / 4),
   });
 
-  const provider = createProvider({ provider: 'gemini', apiKey: GEMINI_API_KEY });
   const temperature = 0.2;
   const thinking = 'minimal';
   emit({ stage: 'llm_start', provider: provider.name, model: provider.model, temperature, thinking });
@@ -227,7 +259,12 @@ export async function askCareerStream(
   const llmStarted = Date.now();
   let verbalized;
   try {
-    verbalized = await verbalize(ir, provider, { temperature, thinking, recentTurns });
+    verbalized = await verbalize(ir, provider, {
+      temperature,
+      thinking,
+      recentTurns,
+      narrativeTemplate,
+    });
   } catch (err) {
     const raw = err instanceof Error ? err.message : 'LLM request failed';
     throw new Error(
@@ -239,6 +276,7 @@ export async function askCareerStream(
   const llmLatencyMs = Date.now() - llmStarted;
 
   const focusNodeIds = ir.anchorNodes.slice(0, 5).map((n) => n.id);
+  const sessionKnowledge = accumulateSessionKnowledge(prevContext, focusNodeIds, typeOf);
   sessionContextStore.update(sessionId, {
     turn: (prevContext?.turn ?? 0) + 1,
     lastIntent: intent,
@@ -247,6 +285,7 @@ export async function askCareerStream(
       ...(prevContext?.recentTurns ?? []),
       { question: q, answer: verbalized.answer, focusNodeIds },
     ],
+    ...sessionKnowledge,
   });
 
   emit({

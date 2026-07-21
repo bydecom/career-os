@@ -60,6 +60,11 @@ export interface RetrieveOptions {
    * Seeded into PPR alongside metadata anchors and fused as the `context` engine.
    */
   carryOverNodeIds?: string[];
+  /**
+   * When set, graph-expansion results are limited to these ontology type strings
+   * (e.g. ['decision', 'technology']). Metadata / context / BM25 / vector are unchanged.
+   */
+  nodeTypeFilter?: string[];
 }
 
 /** Structurally-typed so @career-os/retriever doesn't need a hard dependency on @career-os/embedding. */
@@ -178,7 +183,10 @@ export class Retriever {
   }
 
   private computeRankedLists(query: string, options: RetrieveOptions): RankedLists {
-    const { bm25TopK, graphTopK, carryOverNodeIds = [] } = { ...DEFAULTS, ...options };
+    const { bm25TopK, graphTopK, carryOverNodeIds = [], nodeTypeFilter } = {
+      ...DEFAULTS,
+      ...options,
+    };
 
     // Step 1: Metadata Lookup (the deterministic anchor).
     const metadataMatches = this.metadataIndex.lookup(query);
@@ -199,8 +207,14 @@ export class Retriever {
         direction: 'bidirectional',
       });
       const seedSet = new Set(seedIds);
+      const typeAllow = nodeTypeFilter && nodeTypeFilter.length > 0 ? new Set(nodeTypeFilter) : null;
       graphScored = Array.from(scores.entries())
         .filter(([nodeId]) => !seedSet.has(nodeId)) // graph rank is for *expansion*, not re-ranking the seed itself
+        .filter(([nodeId]) => {
+          if (!typeAllow) return true;
+          const node = this.nodesById.get(nodeId);
+          return node ? typeAllow.has(String(node.type)) : false;
+        })
         .sort((a, b) => b[1] - a[1])
         .slice(0, graphTopK)
         .map(([nodeId, score]) => ({ nodeId, score }));

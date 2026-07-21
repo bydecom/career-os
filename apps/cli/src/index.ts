@@ -253,9 +253,7 @@ async function runAsk() {
   }
   const retrieveLatencyMs = Date.now() - retrieveStarted;
 
-  const ir = applyBudget(buildConversationIR(query, outcome.results, graph, { topK }), {
-    topK: Math.min(topK, 8),
-  });
+  const ir = applyBudget(buildConversationIR(query, outcome.results, graph, { topK }), { topK: 8 });
 
   appendJsonl('query-logs.jsonl', {
     ts: new Date().toISOString(),

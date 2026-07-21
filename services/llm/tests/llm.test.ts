@@ -224,6 +224,13 @@ describe('verbalize', () => {
     expect(user.indexOf('Conversation so far')).toBeLessThan(user.indexOf('Question:'));
   });
 
+  it('buildVerbalizeUserPrompt includes narrative template before ConversationIR', () => {
+    const user = buildVerbalizeUserPrompt(sampleIr, undefined, 'Problem → Architecture → Outcome');
+    expect(user).toContain('Narrative structure to follow:');
+    expect(user).toContain('Problem → Architecture → Outcome');
+    expect(user.indexOf('Narrative structure to follow:')).toBeLessThan(user.indexOf('ConversationIR'));
+  });
+
   it('sends ConversationIR markdown and the knowledge-interface system prompt', async () => {
     let captured: ChatRequest | undefined;
     const fake = fakeProvider({
@@ -262,5 +269,45 @@ describe('verbalize', () => {
 
     expect(deltas).toEqual(['Part ', 'A']);
     expect(result.answer).toBe('Part A');
+  });
+});
+
+describe('classifyIntentByLlm', () => {
+  it('accepts a valid enum intent from structured JSON', async () => {
+    const { classifyIntentByLlm } = await import('../src/intentPlanner.js');
+    const { InterviewIntent } = await import('@career-os/conversation');
+    const fake = fakeProvider({
+      async complete() {
+        return {
+          text: JSON.stringify({
+            intent: 'PROJECT_STORY',
+            entity: 'CareerOS',
+            confidence: 0.9,
+            needClarification: false,
+          }),
+        };
+      },
+    });
+    const out = await classifyIntentByLlm('Tell me about it', [], fake);
+    expect(out.intent).toBe(InterviewIntent.PROJECT_STORY);
+    expect(out.entity).toBe('CareerOS');
+  });
+
+  it('rejects invented intents and falls back to UNKNOWN', async () => {
+    const { classifyIntentByLlm } = await import('../src/intentPlanner.js');
+    const { InterviewIntent } = await import('@career-os/conversation');
+    const fake = fakeProvider({
+      async complete() {
+        return {
+          text: JSON.stringify({
+            intent: 'MADE_UP_INTENT',
+            confidence: 0.9,
+            needClarification: false,
+          }),
+        };
+      },
+    });
+    const out = await classifyIntentByLlm('???', [], fake);
+    expect(out.intent).toBe(InterviewIntent.UNKNOWN);
   });
 });

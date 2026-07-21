@@ -3,10 +3,16 @@ import { NodeType, EdgeType } from '@career-os/ontology';
 import type { KnowledgeGraph, KnowledgeNode, KnowledgeEdge } from '@career-os/ontology';
 import { Retriever } from '../src/retrieve.js';
 
-function makeNode(id: string, name: string, body: string, aliases: string[] = []): KnowledgeNode<any> {
+function makeNode(
+  id: string,
+  name: string,
+  body: string,
+  aliases: string[] = [],
+  type: NodeType = NodeType.Technology,
+): KnowledgeNode<any> {
   return {
     id,
-    type: NodeType.Technology,
+    type,
     name,
     metadata: { schemaVersion: '1', aliases },
     body: { raw: body, sections: [] },
@@ -32,12 +38,24 @@ const graph: KnowledgeGraph = {
     makeNode(
       'ecommerce-platform',
       'E-commerce Platform',
-      'Full-stack platform. Async workers cut admin latency from 2s to 10ms using a message queue.'
+      'Full-stack platform. Async workers cut admin latency from 2s to 10ms using a message queue.',
+      [],
+      NodeType.Project,
     ),
     makeNode('redis', 'Redis', 'In-memory cache to reduce database load.'),
     makeNode('phaser', 'Phaser', 'A 2D game framework used for a match-3 puzzle game.'),
+    makeNode(
+      'use-rabbitmq-decision',
+      'Use RabbitMQ',
+      'Chose RabbitMQ over Kafka for operational simplicity.',
+      [],
+      NodeType.Decision,
+    ),
   ],
-  edges: [makeEdge('e1', 'ecommerce-platform', 'rabbitmq', EdgeType.USES)],
+  edges: [
+    makeEdge('e1', 'ecommerce-platform', 'rabbitmq', EdgeType.USES),
+    makeEdge('e2', 'ecommerce-platform', 'use-rabbitmq-decision', EdgeType.CONTAINS),
+  ],
 };
 
 describe('Retriever.retrieve', () => {
@@ -111,6 +129,24 @@ describe('Retriever.retrieve', () => {
 
     const ids = results.map((r) => r.node.id);
     expect(ids).toContain('ecommerce-platform');
+    const focus = results.find((r) => r.node.id === 'ecommerce-platform');
+    expect(focus?.explanation.engines).toContain('context');
+  });
+
+  it('filters graph expansion by nodeTypeFilter without dropping metadata/context seeds', () => {
+    const { retrieval, results } = retriever.retrieve('async workers', {
+      carryOverNodeIds: ['ecommerce-platform'],
+      nodeTypeFilter: ['decision'],
+    });
+
+    // Graph list is Decision-only (rabbitmq Technology neighbor excluded)
+    expect(retrieval.graph.every((g) => {
+      const node = graph.nodes.find((n) => n.id === g.nodeId);
+      return node?.type === NodeType.Decision;
+    })).toBe(true);
+    expect(retrieval.graph.some((g) => g.nodeId === 'rabbitmq')).toBe(false);
+    // Context seed still fused even though it is a Project (filter only affects graph)
+    expect(results.some((r) => r.node.id === 'ecommerce-platform')).toBe(true);
     const focus = results.find((r) => r.node.id === 'ecommerce-platform');
     expect(focus?.explanation.engines).toContain('context');
   });

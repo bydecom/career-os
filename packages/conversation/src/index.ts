@@ -5,3 +5,5 @@ export * from './budget.js';
 export * from './renderer.js';
 export * from './knowledgeTrace.js';
 export * from './continuation.js';
+export * from './interviewIntent.js';
+export * from './retrievalProfiles.js';

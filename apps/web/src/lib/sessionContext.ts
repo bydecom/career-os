@@ -17,11 +17,16 @@ export interface ContextObject {
   lastIntent: string;
   recentTurns: TurnRecord[];
   updatedAt: number;
+  /** Union of focus nodes answered across the session (deduped). */
+  coveredNodeIds: string[];
+  /** Counts by ontology nodeType string — recruiter interest signal. */
+  recruiterInterest: Record<string, number>;
 }
 
 const MAX_SESSIONS = 500;
 const MAX_RECENT_TURNS = 3;
 const MAX_FOCUS_NODES = 5;
+const MAX_COVERED_NODES = 50;
 const IDLE_TTL_MS = 30 * 60 * 1000;
 
 export class SessionContextStore {
@@ -39,6 +44,8 @@ export class SessionContextStore {
       focusNodeIds: (patch.focusNodeIds ?? prev?.focusNodeIds ?? []).slice(0, MAX_FOCUS_NODES),
       lastIntent: patch.lastIntent ?? prev?.lastIntent ?? '',
       recentTurns: (patch.recentTurns ?? prev?.recentTurns ?? []).slice(-MAX_RECENT_TURNS),
+      coveredNodeIds: (patch.coveredNodeIds ?? prev?.coveredNodeIds ?? []).slice(-MAX_COVERED_NODES),
+      recruiterInterest: patch.recruiterInterest ?? prev?.recruiterInterest ?? {},
       updatedAt: Date.now(),
     };
     this.contexts.set(sessionId, next);
@@ -72,6 +79,42 @@ export class SessionContextStore {
       this.contexts.delete(ranked[i]![0]);
     }
   }
+}
+
+/**
+ * Merge focus nodes into covered set + bump recruiterInterest by node type.
+ */
+export function accumulateSessionKnowledge(
+  prev: ContextObject | undefined,
+  focusNodeIds: string[],
+  typeOf: (id: string) => string,
+): Pick<ContextObject, 'coveredNodeIds' | 'recruiterInterest'> {
+  const covered = new Set(prev?.coveredNodeIds ?? []);
+  const interest: Record<string, number> = { ...(prev?.recruiterInterest ?? {}) };
+  for (const id of focusNodeIds) {
+    covered.add(id);
+    const t = typeOf(id);
+    interest[t] = (interest[t] ?? 0) + 1;
+  }
+  return {
+    coveredNodeIds: Array.from(covered).slice(-MAX_COVERED_NODES),
+    recruiterInterest: interest,
+  };
+}
+
+/**
+ * Rule-only next-best hint: highest-interest type among candidates.
+ * Returns a nodeType string or null — never calls an LLM.
+ */
+export function suggestNextBestNodeType(
+  context: ContextObject | undefined,
+  availableTypes: string[],
+): string | null {
+  if (!context || availableTypes.length === 0) return null;
+  const ranked = [...availableTypes].sort(
+    (a, b) => (context.recruiterInterest[b] ?? 0) - (context.recruiterInterest[a] ?? 0),
+  );
+  return ranked[0] ?? null;
 }
 
 export const sessionContextStore = new SessionContextStore();

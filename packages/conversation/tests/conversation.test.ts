@@ -125,28 +125,28 @@ describe('applyBudget', () => {
 
   it('keeps a low-scoring context carry-over anchor even when BM25 floods topK', () => {
     const focus = makeNode('career-os', NodeType.Project, 'My career knowledge OS.');
-    const flood = Array.from({ length: 10 }, (_, i) =>
+    const flood = Array.from({ length: 9 }, (_, i) =>
       makeNode(`project-${i}`, NodeType.Project, `Generic project ${i} about dự án features.`),
     );
     const all = [focus, ...flood];
     const graphFlood: KnowledgeGraph = { nodes: all, edges: [] };
 
-    // Context anchor has a much lower fused score than BM25 flood nodes.
-    const ir = buildConversationIR(
-      'Dự án này có gì đặc biệt?',
-      [
-        ...flood.map((n, i) => hit(n, ['bm25'], 0.5 - i * 0.01)),
-        hit(focus, ['context'], 0.02),
-      ],
-      graphFlood,
-      { topK: 12 },
-    );
+    const hits = [
+      ...flood.map((n, i) => hit(n, ['bm25'], 0.5 - i * 0.01)),
+      hit(focus, ['context'], 0.02),
+    ];
 
-    expect(ir.anchorNodes.map((n) => n.id)).toContain('career-os');
+    // Production path: retrieve topK=10 → builder keeps full window → budget enforces topK=8.
+    const ir = buildConversationIR('Dự án này có gì đặc biệt?', hits, graphFlood, { topK: 10 });
+    expect(ir.candidateNodes.map((n) => n.id)).toContain('career-os');
 
     const budgeted = applyBudget(ir, { topK: 8 });
     expect(budgeted.candidateNodes.map((n) => n.id)).toContain('career-os');
     expect(budgeted.anchorNodes.map((n) => n.id)).toContain('career-os');
+
+    // Naive builder slice at topK=8 (old askCareer Math.min) drops the anchor before budget runs.
+    const naiveBuilder = buildConversationIR('Dự án này có gì đặc biệt?', hits, graphFlood, { topK: 8 });
+    expect(naiveBuilder.candidateNodes.map((n) => n.id)).not.toContain('career-os');
   });
 });
 

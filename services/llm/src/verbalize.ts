@@ -1,6 +1,8 @@
 import type { ConversationIR } from '@career-os/conversation';
 import { formatConfidenceLabel, promptRenderer } from '@career-os/conversation';
-import type { ChatRequest, LlmProvider, VerbalizeResult } from './types.js';
+import type { ChatRequest, LlmProvider, RecentTurn, VerbalizeResult } from './types.js';
+
+export type { RecentTurn };
 
 // ---------------------------------------------------------------------------
 // verbalize — LLM turns ConversationIR into natural language.
@@ -25,11 +27,6 @@ Rules:
 5. Do not produce a separate "reasoning" section — reasoning is already computed deterministically by the system.
 6. Keep the answer concise and evidence-first.`;
 
-export interface RecentTurn {
-  question: string;
-  answer: string;
-}
-
 export interface VerbalizeOptions {
   temperature?: number;
   maxTokens?: number;
@@ -40,6 +37,8 @@ export interface VerbalizeOptions {
   onDelta?: (text: string) => void;
   /** Prior turns in this session — conversational continuity only, not new facts. */
   recentTurns?: RecentTurn[];
+  /** Intent-specific narrative outline (from RetrievalProfile.promptTemplate). */
+  narrativeTemplate?: string;
 }
 
 /** Lightweight script detector — enough to pin answer language for Gemini. */
@@ -67,6 +66,7 @@ function languageDirective(lang: 'vi' | 'en'): string {
 export function buildVerbalizeUserPrompt(
   ir: ConversationIR,
   recentTurns?: RecentTurn[],
+  narrativeTemplate?: string,
 ): string {
   const label = formatConfidenceLabel(ir.confidence);
   const lang = detectQuestionLanguage(ir.question);
@@ -81,6 +81,11 @@ export function buildVerbalizeUserPrompt(
         ]
       : [];
 
+  const narrativeBlock =
+    narrativeTemplate && narrativeTemplate.trim()
+      ? [`Narrative structure to follow:`, narrativeTemplate.trim(), ``]
+      : [];
+
   return [
     ...conversationBlock,
     `Retrieval Confidence: ${label} (${ir.confidence.toFixed(2)})`,
@@ -88,6 +93,7 @@ export function buildVerbalizeUserPrompt(
     `Question: ${ir.question}`,
     languageDirective(lang),
     ``,
+    ...narrativeBlock,
     `Verbalize the following ConversationIR. Do not add facts that are not present.`,
     ``,
     promptRenderer.toMarkdown(ir),
@@ -104,7 +110,7 @@ export async function verbalize(
   provider: LlmProvider,
   options: VerbalizeOptions = {},
 ): Promise<VerbalizeResult> {
-  const user = buildVerbalizeUserPrompt(ir, options.recentTurns);
+  const user = buildVerbalizeUserPrompt(ir, options.recentTurns, options.narrativeTemplate);
 
   const request: ChatRequest = {
     system: VERBALIZE_SYSTEM_PROMPT,
