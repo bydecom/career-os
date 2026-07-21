@@ -73,5 +73,17 @@
     "id": "career-os-project",
     "query": "knowledge compiler that turns markdown into a career knowledge graph",
     "relevantNodeIds": ["career-os"]
+  },
+  {
+    "id": "continuation-du-an-nay",
+    "query": "Dự án này có gì đặc biệt?",
+    "carryOverNodeIds": ["career-os"],
+    "relevantNodeIds": ["career-os"]
+  },
+  {
+    "id": "continuation-compare-rabbitmq",
+    "query": "So với Redis thì sao?",
+    "carryOverNodeIds": ["ecommerce-platform"],
+    "relevantNodeIds": ["ecommerce-platform", "redis"]
   }
 ]

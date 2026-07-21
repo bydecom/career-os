@@ -97,7 +97,10 @@ export function buildConversationIR(
   const topK = options.topK ?? 12;
   const selected = hits.slice(0, topK);
   const candidateNodes = selected.map(toCandidate);
-  const anchorNodes = candidateNodes.filter((n) => n.engines.includes('metadata'));
+  // Anchors = deterministic metadata hits OR session carry-over (context engine).
+  const anchorNodes = candidateNodes.filter(
+    (n) => n.engines.includes('metadata') || n.engines.includes('context'),
+  );
   const selectedIds = new Set(candidateNodes.map((n) => n.id));
 
   const retrievalTrace: RetrievalTraceStep[] = hits.map((hit, index) => ({

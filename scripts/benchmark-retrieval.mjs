@@ -74,9 +74,13 @@ let totalPrecision = 0;
 let totalRecall = 0;
 
 for (const testCase of cases) {
+  const retrieveOpts = {
+    topK: K,
+    ...(testCase.carryOverNodeIds ? { carryOverNodeIds: testCase.carryOverNodeIds } : {}),
+  };
   const results = useVector
-    ? (await retriever.retrieveHybrid(testCase.query, embedder, vectorIndex, { topK: K })).results
-    : retriever.retrieve(testCase.query, { topK: K }).results;
+    ? (await retriever.retrieveHybrid(testCase.query, embedder, vectorIndex, retrieveOpts)).results
+    : retriever.retrieve(testCase.query, retrieveOpts).results;
   const retrievedIds = results.map((r) => r.node.id);
   const relevantSet = new Set(testCase.relevantNodeIds);
 

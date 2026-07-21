@@ -98,4 +98,20 @@ describe('Retriever.retrieve', () => {
 
     expect(results).toEqual([]);
   });
+
+  it('checkAnchors returns metadata matches without running BM25/graph', () => {
+    const anchors = retriever.checkAnchors('Why did you use RabbitMQ?');
+    expect(anchors.some((m) => m.nodeId === 'rabbitmq')).toBe(true);
+  });
+
+  it('seeds PPR and fuses context engine from carryOverNodeIds when metadata is empty', () => {
+    const { results } = retriever.retrieve('Dự án này có gì đặc biệt?', {
+      carryOverNodeIds: ['ecommerce-platform'],
+    });
+
+    const ids = results.map((r) => r.node.id);
+    expect(ids).toContain('ecommerce-platform');
+    const focus = results.find((r) => r.node.id === 'ecommerce-platform');
+    expect(focus?.explanation.engines).toContain('context');
+  });
 });

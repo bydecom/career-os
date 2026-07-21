@@ -55,6 +55,11 @@ export interface RetrieveOptions {
   bm25TopK?: number;
   /** Max number of graph PPR candidates considered before fusion. Default 20. */
   graphTopK?: number;
+  /**
+   * Node IDs carried over from the previous turn's focus (session context).
+   * Seeded into PPR alongside metadata anchors and fused as the `context` engine.
+   */
+  carryOverNodeIds?: string[];
 }
 
 /** Structurally-typed so @career-os/retriever doesn't need a hard dependency on @career-os/embedding. */
@@ -72,7 +77,7 @@ export interface HybridRetrieveOptions extends RetrieveOptions {
   vectorTopK?: number;
 }
 
-const DEFAULTS: Required<RetrieveOptions> = { topK: 10, bm25TopK: 20, graphTopK: 20 };
+const DEFAULTS = { topK: 10, bm25TopK: 20, graphTopK: 20 } as const;
 
 interface RankedLists {
   metadataMatches: MetadataMatch[];
@@ -81,6 +86,7 @@ interface RankedLists {
   graphScored: { nodeId: string; score: number }[];
   bm25List: RankedList;
   bm25Scored: { nodeId: string; score: number }[];
+  contextList: RankedList;
 }
 
 export class Retriever {
@@ -99,10 +105,17 @@ export class Retriever {
   /** Deterministic path only: Metadata Lookup + Graph PPR + BM25. No network calls. */
   retrieve(query: string, options: RetrieveOptions = {}): RetrieveOutcome {
     const { topK } = { ...DEFAULTS, ...options };
-    const { metadataMatches, metadataList, graphList, graphScored, bm25List, bm25Scored } =
-      this.computeRankedLists(query, options);
+    const {
+      metadataMatches,
+      metadataList,
+      graphList,
+      graphScored,
+      bm25List,
+      bm25Scored,
+      contextList,
+    } = this.computeRankedLists(query, options);
 
-    const fused = fuseRankings([metadataList, graphList, bm25List]);
+    const fused = fuseRankings([metadataList, graphList, bm25List, contextList]);
     return {
       results: this.toResults(fused, topK, metadataMatches),
       retrieval: {
@@ -112,6 +125,15 @@ export class Retriever {
         vector: [],
       },
     };
+  }
+
+  /**
+   * Sync Metadata Lookup only — used by the ask pipeline to decide continuation
+   * before choosing retrieve() / retrieveHybrid(), so carry-over never forces a
+   * second embed + Qdrant round-trip.
+   */
+  checkAnchors(query: string): MetadataMatch[] {
+    return this.metadataIndex.lookup(query);
   }
 
   /**
@@ -129,14 +151,21 @@ export class Retriever {
     options: HybridRetrieveOptions = {}
   ): Promise<RetrieveOutcome> {
     const { topK, vectorTopK = 20 } = { ...DEFAULTS, ...options };
-    const { metadataMatches, metadataList, graphList, graphScored, bm25List, bm25Scored } =
-      this.computeRankedLists(query, options);
+    const {
+      metadataMatches,
+      metadataList,
+      graphList,
+      graphScored,
+      bm25List,
+      bm25Scored,
+      contextList,
+    } = this.computeRankedLists(query, options);
 
     const queryVector = await embedder.embed(query);
     const vectorMatches = await vectorSearcher.search(queryVector, vectorTopK);
     const vectorList: RankedList = { engine: 'vector', nodeIds: vectorMatches.map((m) => m.nodeId) };
 
-    const fused = fuseRankings([metadataList, graphList, bm25List, vectorList]);
+    const fused = fuseRankings([metadataList, graphList, bm25List, vectorList, contextList]);
     return {
       results: this.toResults(fused, topK, metadataMatches),
       retrieval: {
@@ -149,23 +178,29 @@ export class Retriever {
   }
 
   private computeRankedLists(query: string, options: RetrieveOptions): RankedLists {
-    const { bm25TopK, graphTopK } = { ...DEFAULTS, ...options };
+    const { bm25TopK, graphTopK, carryOverNodeIds = [] } = { ...DEFAULTS, ...options };
 
     // Step 1: Metadata Lookup (the deterministic anchor).
     const metadataMatches = this.metadataIndex.lookup(query);
     const metadataList: RankedList = { engine: 'metadata', nodeIds: metadataMatches.map((m) => m.nodeId) };
 
-    // Step 2: Graph PPR, seeded from the metadata anchors (if any).
+    // Session carry-over — only keep ids that still exist in the graph.
+    const validCarryOver = carryOverNodeIds.filter((id) => this.nodesById.has(id));
+    const contextList: RankedList = { engine: 'context', nodeIds: validCarryOver };
+
+    // Step 2: Graph PPR, seeded from metadata anchors + carry-over focus.
+    const seedIds = Array.from(
+      new Set([...metadataMatches.map((m) => m.nodeId), ...validCarryOver]),
+    );
     let graphList: RankedList = { engine: 'graph', nodeIds: [] };
     let graphScored: { nodeId: string; score: number }[] = [];
-    if (metadataMatches.length > 0) {
-      const { scores } = personalizedPageRank(
-        this.adjacency,
-        metadataMatches.map((m) => m.nodeId),
-        { direction: 'bidirectional' }
-      );
+    if (seedIds.length > 0) {
+      const { scores } = personalizedPageRank(this.adjacency, seedIds, {
+        direction: 'bidirectional',
+      });
+      const seedSet = new Set(seedIds);
       graphScored = Array.from(scores.entries())
-        .filter(([nodeId]) => !metadataMatches.some((m) => m.nodeId === nodeId)) // graph rank is for *expansion*, not re-ranking the anchor itself
+        .filter(([nodeId]) => !seedSet.has(nodeId)) // graph rank is for *expansion*, not re-ranking the seed itself
         .sort((a, b) => b[1] - a[1])
         .slice(0, graphTopK)
         .map(([nodeId, score]) => ({ nodeId, score }));
@@ -176,7 +211,15 @@ export class Retriever {
     const bm25Matches = this.bm25Index.search(query, bm25TopK);
     const bm25List: RankedList = { engine: 'bm25', nodeIds: bm25Matches.map((m) => m.nodeId) };
 
-    return { metadataMatches, metadataList, graphList, graphScored, bm25List, bm25Scored: bm25Matches };
+    return {
+      metadataMatches,
+      metadataList,
+      graphList,
+      graphScored,
+      bm25List,
+      bm25Scored: bm25Matches,
+      contextList,
+    };
   }
 
   private toResults(
@@ -214,6 +257,8 @@ export class Retriever {
       }
       case 'graph':
         return `reached via graph traversal from the anchor node (rank ${contribution.rank})`;
+      case 'context':
+        return `carried over as active focus from the previous turn (rank ${contribution.rank})`;
       case 'bm25':
         return `lexical keyword match (rank ${contribution.rank})`;
       case 'vector':

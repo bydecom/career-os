@@ -79,6 +79,7 @@ export type StageEvent =
       citations: string[];
       raw: unknown;
       knowledgeTrace: KnowledgeTrace;
+      isContinuation?: boolean;
     }
   | { stage: 'prompt'; system: string; user: string; rendered: string; chars: number; estTokens: number }
   | { stage: 'llm_start'; provider: string; model: string; temperature: number; thinking: string }
@@ -102,6 +103,7 @@ export type AskResult = {
   confidence?: number;
   confidenceLabel?: string;
   knowledgeTrace?: KnowledgeTrace;
+  isContinuation?: boolean;
   selectedNodes: AskNode[];
   edges: AskEdge[];
   metadata: EngineMatch[];
@@ -170,6 +172,7 @@ export function applyStageEvent(prev: AskResult, event: StageEvent): AskResult {
         citations: event.citations,
         irRaw: event.raw,
         knowledgeTrace: event.knowledgeTrace,
+        isContinuation: event.isContinuation,
       };
     case 'prompt':
       return {

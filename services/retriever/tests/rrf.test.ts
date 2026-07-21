@@ -36,6 +36,18 @@ describe('fuseRankings', () => {
     expect(result[0]!.score).toBeCloseTo(ENGINE_WEIGHTS.graph / (k + 1), 10);
   });
 
+  it('ranks context above graph and bm25 at the same rank, below metadata', () => {
+    const lists: RankedList[] = [
+      { engine: 'metadata', nodeIds: ['meta'] },
+      { engine: 'context', nodeIds: ['ctx'] },
+      { engine: 'graph', nodeIds: ['g'] },
+      { engine: 'bm25', nodeIds: ['lex'] },
+    ];
+
+    const result = fuseRankings(lists);
+    expect(result.map((r) => r.nodeId)).toEqual(['meta', 'ctx', 'g', 'lex']);
+  });
+
   it('returns results sorted by score descending', () => {
     const lists: RankedList[] = [{ engine: 'bm25', nodeIds: ['a', 'b', 'c'] }];
 

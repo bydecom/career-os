@@ -10,10 +10,16 @@
 // Rank is 1-based (the top result of an engine has Rank = 1).
 // ---------------------------------------------------------------------------
 
-export type RetrievalEngine = 'metadata' | 'graph' | 'bm25' | 'vector';
+export type RetrievalEngine = 'metadata' | 'graph' | 'bm25' | 'vector' | 'context';
 
 export const ENGINE_WEIGHTS: Record<RetrievalEngine, number> = {
   metadata: 4.0,
+  /**
+   * Session carry-over focus. Must outrank graph expansion of the same seed
+   * (graph=3.0), otherwise PPR neighbors flood topK and the focus node itself
+   * never enters retrieve results — budget cannot save what retrieval dropped.
+   */
+  context: 3.5,
   graph: 3.0,
   bm25: 1.0,
   vector: 1.0,

@@ -5,7 +5,7 @@
 // The LLM only verbalizes this IR; it never invents facts.
 // ---------------------------------------------------------------------------
 
-export type RetrievalEngine = 'metadata' | 'graph' | 'bm25' | 'vector';
+export type RetrievalEngine = 'metadata' | 'graph' | 'bm25' | 'vector' | 'context';
 
 export interface CandidateNode {
   id: string;

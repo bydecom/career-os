@@ -2,13 +2,26 @@ import { resolve } from 'path';
 import { existsSync } from 'fs';
 import { loadGraph, Retriever, QdrantVectorIndex } from '@career-os/retriever';
 import { GeminiEmbedder } from '@career-os/embedding';
-import { applyBudget, buildConversationIR, buildKnowledgeTrace, formatConfidenceLabel, promptRenderer } from '@career-os/conversation';
-import { createProvider, verbalize, VERBALIZE_SYSTEM_PROMPT } from '@career-os/llm';
+import {
+  applyBudget,
+  buildConversationIR,
+  buildKnowledgeTrace,
+  formatConfidenceLabel,
+  promptRenderer,
+} from '@career-os/conversation';
+import {
+  createProvider,
+  verbalize,
+  VERBALIZE_SYSTEM_PROMPT,
+  buildVerbalizeUserPrompt,
+} from '@career-os/llm';
 import type { KnowledgeGraph, KnowledgeNode } from '@career-os/ontology';
 import type { EngineMatch, FusedMatch, StageEvent } from './askTypes';
+import { detectContinuation, sessionContextStore } from './sessionContext';
 
 const ROOT = resolve(process.cwd(), '../..');
 const GRAPH_PATH = resolve(ROOT, 'career-data/generated/graph.json');
+const DEFAULT_INTENT = 'Project Explanation';
 
 function ensureEnv(): void {
   try {
@@ -22,9 +35,21 @@ function inferIntent(question: string): string {
   const q = question.toLowerCase();
   if (/hallucin|evidence|invent|fake|true/.test(q)) return 'Evidence / Certainty';
   if (/architect|how does|pipeline|compile|ir\b/.test(q)) return 'Architecture Explanation';
-  if (/compare|vs|versus|difference/.test(q)) return 'Comparison';
+  if (/compare|vs|versus|difference|so với|so sánh/.test(q)) return 'Comparison';
   if (/skill|tech|stack|typescript|python|redis/.test(q)) return 'Skill Deep-dive';
-  return 'Project Explanation';
+  return DEFAULT_INTENT;
+}
+
+function resolveIntent(
+  question: string,
+  isContinuation: boolean,
+  lastIntent: string | undefined,
+): string {
+  const inferred = inferIntent(question);
+  if (isContinuation && inferred === DEFAULT_INTENT && lastIntent) {
+    return lastIntent;
+  }
+  return inferred;
 }
 
 function nodeLookup(graph: KnowledgeGraph): (id: string) => KnowledgeNode<any> | undefined {
@@ -40,6 +65,7 @@ function nodeLookup(graph: KnowledgeGraph): (id: string) => KnowledgeNode<any> |
  */
 export async function askCareerStream(
   question: string,
+  sessionId: string,
   emit: (event: StageEvent) => void,
 ): Promise<void> {
   ensureEnv();
@@ -62,9 +88,17 @@ export async function askCareerStream(
   const nameOf = (id: string) => lookup(id)?.name ?? id;
   const typeOf = (id: string) => String(lookup(id)?.type ?? 'unknown');
 
+  const prevContext = sessionContextStore.get(sessionId);
   const retriever = new Retriever(graph);
   const topK = 10;
   let usedVector = Boolean(QDRANT_URL);
+
+  // Decide continuation BEFORE retrieve/hybrid so we never double-embed.
+  const anchors = retriever.checkAnchors(q);
+  const isContinuation = Boolean(
+    prevContext?.focusNodeIds.length && detectContinuation(q, anchors.length),
+  );
+  const carryOverNodeIds = isContinuation ? prevContext!.focusNodeIds : undefined;
 
   const retrieveStarted = Date.now();
   let outcome;
@@ -77,14 +111,17 @@ export async function askCareerStream(
         collection: 'career-nodes',
         vectorSize: 768,
       });
-      outcome = await retriever.retrieveHybrid(q, embedder, vectorIndex, { topK });
+      outcome = await retriever.retrieveHybrid(q, embedder, vectorIndex, {
+        topK,
+        carryOverNodeIds,
+      });
     } catch {
       // Qdrant/embed unreachable — degrade to lexical so Interview still answers.
       usedVector = false;
-      outcome = retriever.retrieve(q, { topK });
+      outcome = retriever.retrieve(q, { topK, carryOverNodeIds });
     }
   } else {
-    outcome = retriever.retrieve(q, { topK });
+    outcome = retriever.retrieve(q, { topK, carryOverNodeIds });
   }
   const retrieveLatencyMs = Date.now() - retrieveStarted;
 
@@ -92,6 +129,7 @@ export async function askCareerStream(
     topK: Math.min(topK, 8),
   });
   const knowledgeTrace = buildKnowledgeTrace(ir.candidateNodes, ir.anchorNodes);
+  const intent = resolveIntent(q, isContinuation, prevContext?.lastIntent);
 
   const metadataMatches: EngineMatch[] = outcome.retrieval.metadata.map((m) => ({
     nodeId: m.nodeId,
@@ -155,26 +193,22 @@ export async function askCareerStream(
 
   emit({
     stage: 'ir',
-    intent: inferIntent(q),
+    intent,
     confidence: ir.confidence,
     confidenceLabel: formatConfidenceLabel(ir.confidence),
     tokenBudgetHint: ir.tokenBudgetHint,
     citations: ir.candidateNodes.slice(0, 6).map((n) => `${n.type}.${n.id}`),
     raw: ir,
     knowledgeTrace,
+    isContinuation,
   });
 
+  const recentTurns = prevContext?.recentTurns.map((t) => ({
+    question: t.question,
+    answer: t.answer,
+  }));
+  const userPrompt = buildVerbalizeUserPrompt(ir, recentTurns);
   const packageMarkdown = promptRenderer.toMarkdown(ir);
-  const confidenceLabel = formatConfidenceLabel(ir.confidence);
-  const userPrompt = [
-    `Retrieval Confidence: ${confidenceLabel} (${ir.confidence.toFixed(2)})`,
-    ``,
-    `Question: ${ir.question}`,
-    ``,
-    `Verbalize the following ConversationIR. Do not add facts that are not present.`,
-    ``,
-    packageMarkdown,
-  ].join('\n');
 
   emit({
     stage: 'prompt',
@@ -193,7 +227,7 @@ export async function askCareerStream(
   const llmStarted = Date.now();
   let verbalized;
   try {
-    verbalized = await verbalize(ir, provider, { temperature, thinking });
+    verbalized = await verbalize(ir, provider, { temperature, thinking, recentTurns });
   } catch (err) {
     const raw = err instanceof Error ? err.message : 'LLM request failed';
     throw new Error(
@@ -203,6 +237,17 @@ export async function askCareerStream(
     );
   }
   const llmLatencyMs = Date.now() - llmStarted;
+
+  const focusNodeIds = ir.anchorNodes.slice(0, 5).map((n) => n.id);
+  sessionContextStore.update(sessionId, {
+    turn: (prevContext?.turn ?? 0) + 1,
+    lastIntent: intent,
+    focusNodeIds,
+    recentTurns: [
+      ...(prevContext?.recentTurns ?? []),
+      { question: q, answer: verbalized.answer, focusNodeIds },
+    ],
+  });
 
   emit({
     stage: 'answer',

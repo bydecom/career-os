@@ -39,7 +39,9 @@ describe('scoreConfidence', () => {
   it('sums unique engine weights and caps at 1', () => {
     expect(scoreConfidence(['metadata'])).toBeCloseTo(0.45);
     expect(scoreConfidence(['metadata', 'graph', 'bm25', 'vector'])).toBeCloseTo(1.0);
+    expect(scoreConfidence(['metadata', 'graph', 'context', 'bm25', 'vector'])).toBeCloseTo(1.0);
     expect(scoreConfidence(['metadata', 'metadata'])).toBeCloseTo(0.45);
+    expect(scoreConfidence(['context'])).toBeCloseTo(0.35);
   });
 
   it('maps scores to High / Medium / Low labels', () => {
@@ -119,6 +121,48 @@ describe('applyBudget', () => {
       { topK: 5 }
     );
     expect(budgeted.candidateNodes.filter((n) => n.id === 'rabbitmq')).toHaveLength(1);
+  });
+
+  it('keeps a low-scoring context carry-over anchor even when BM25 floods topK', () => {
+    const focus = makeNode('career-os', NodeType.Project, 'My career knowledge OS.');
+    const flood = Array.from({ length: 10 }, (_, i) =>
+      makeNode(`project-${i}`, NodeType.Project, `Generic project ${i} about dự án features.`),
+    );
+    const all = [focus, ...flood];
+    const graphFlood: KnowledgeGraph = { nodes: all, edges: [] };
+
+    // Context anchor has a much lower fused score than BM25 flood nodes.
+    const ir = buildConversationIR(
+      'Dự án này có gì đặc biệt?',
+      [
+        ...flood.map((n, i) => hit(n, ['bm25'], 0.5 - i * 0.01)),
+        hit(focus, ['context'], 0.02),
+      ],
+      graphFlood,
+      { topK: 12 },
+    );
+
+    expect(ir.anchorNodes.map((n) => n.id)).toContain('career-os');
+
+    const budgeted = applyBudget(ir, { topK: 8 });
+    expect(budgeted.candidateNodes.map((n) => n.id)).toContain('career-os');
+    expect(budgeted.anchorNodes.map((n) => n.id)).toContain('career-os');
+  });
+});
+
+describe('buildConversationIR context anchors', () => {
+  it('treats context-engine hits as anchors alongside metadata', () => {
+    const career = makeNode('career-os', NodeType.Project, 'Career knowledge compiler.');
+    const rabbit = makeNode('rabbitmq', NodeType.Technology, 'Message broker.');
+    const graph: KnowledgeGraph = { nodes: [career, rabbit], edges: [] };
+
+    const ir = buildConversationIR(
+      'Dự án này có gì đặc biệt?',
+      [hit(career, ['context'], 0.03), hit(rabbit, ['bm25'], 0.04)],
+      graph,
+    );
+
+    expect(ir.anchorNodes.map((n) => n.id)).toEqual(['career-os']);
   });
 });
 

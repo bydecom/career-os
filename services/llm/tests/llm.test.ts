@@ -3,7 +3,7 @@ import { GeminiProvider } from '../src/providers/gemini.js';
 import { createProvider } from '../src/createProvider.js';
 import { SseParser } from '../src/sse/parseSse.js';
 import { mapThinkingToGeminiBudget } from '../src/providers/gemini/thinkingMapper.js';
-import { verbalize, VERBALIZE_SYSTEM_PROMPT } from '../src/verbalize.js';
+import { verbalize, VERBALIZE_SYSTEM_PROMPT, buildVerbalizeUserPrompt, detectQuestionLanguage } from '../src/verbalize.js';
 import type { ChatRequest, ChatStreamChunk, LlmProvider } from '../src/types.js';
 import type { ConversationIR } from '@career-os/conversation';
 
@@ -191,6 +191,39 @@ describe('createProvider', () => {
 });
 
 describe('verbalize', () => {
+  it('uses a first-person candidate persona, not a third-party narrator', () => {
+    expect(VERBALIZE_SYSTEM_PROMPT).toMatch(/speaking AS the candidate/i);
+    expect(VERBALIZE_SYSTEM_PROMPT).not.toMatch(/do NOT pretend to be the candidate/i);
+    expect(VERBALIZE_SYSTEM_PROMPT).toMatch(/Match the language of the CURRENT question/i);
+  });
+
+  it('detectQuestionLanguage distinguishes English vs Vietnamese', () => {
+    expect(detectQuestionLanguage('Tell me about CareerOS')).toBe('en');
+    expect(detectQuestionLanguage('Dự án này có gì đặc biệt?')).toBe('vi');
+  });
+
+  it('buildVerbalizeUserPrompt pins Answer language to the current question', () => {
+    const en = buildVerbalizeUserPrompt(sampleIr, [
+      { question: 'Dự án này làm gì?', answer: 'Tôi xây CareerOS.' },
+    ]);
+    expect(en).toContain('Answer language: English');
+    expect(en).toContain('do NOT copy its language');
+    expect(en.indexOf('Conversation so far')).toBeLessThan(en.indexOf('Question:'));
+
+    const viIr = { ...sampleIr, question: 'Dự án này có gì đặc biệt?' };
+    const vi = buildVerbalizeUserPrompt(viIr);
+    expect(vi).toContain('Answer language: Vietnamese');
+  });
+
+  it('buildVerbalizeUserPrompt includes recent turns before the question', () => {
+    const user = buildVerbalizeUserPrompt(sampleIr, [
+      { question: 'Tell me about CareerOS', answer: 'I built CareerOS as a knowledge compiler.' },
+    ]);
+    expect(user).toContain('Conversation so far');
+    expect(user).toContain('Tell me about CareerOS');
+    expect(user.indexOf('Conversation so far')).toBeLessThan(user.indexOf('Question:'));
+  });
+
   it('sends ConversationIR markdown and the knowledge-interface system prompt', async () => {
     let captured: ChatRequest | undefined;
     const fake = fakeProvider({

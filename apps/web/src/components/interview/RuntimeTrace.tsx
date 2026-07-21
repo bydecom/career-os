@@ -255,7 +255,11 @@ export function RuntimeTrace({
         {inspection.knowledgeTrace ? (
           <Box
             title="Knowledge Used"
-            meta={`${inspection.knowledgeTrace.directMatches.length} direct · ${inspection.knowledgeTrace.supportingContext.length} supporting`}
+            meta={
+              inspection.isContinuation
+                ? `↳ context carried · ${inspection.knowledgeTrace.directMatches.length} direct · ${inspection.knowledgeTrace.supportingContext.length} supporting`
+                : `${inspection.knowledgeTrace.directMatches.length} direct · ${inspection.knowledgeTrace.supportingContext.length} supporting`
+            }
             defaultOpen
           >
             <KnowledgeTracePanel trace={inspection.knowledgeTrace} />

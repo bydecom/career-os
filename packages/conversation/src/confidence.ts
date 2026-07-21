@@ -8,6 +8,8 @@ import type { RetrievalEngine } from './types.js';
 
 export const ENGINE_CONFIDENCE_WEIGHTS: Record<RetrievalEngine, number> = {
   metadata: 0.45,
+  /** Session carry-over — near graph certainty; the prior turn already verified this focus. */
+  context: 0.35,
   graph: 0.3,
   bm25: 0.15,
   vector: 0.1,

@@ -25,9 +25,34 @@ function truncate(text: string, max: number): string {
   return `${text.slice(0, max - 1)}…`;
 }
 
+function tryKeep(
+  node: CandidateNode,
+  kept: CandidateNode[],
+  seen: Set<string>,
+  used: number,
+  topK: number,
+  maxChars: number,
+  maxExcerptChars: number,
+): { kept: boolean; used: number } {
+  if (kept.length >= topK) return { kept: false, used };
+  if (seen.has(node.id)) return { kept: false, used };
+
+  const excerpt = truncate(node.excerpt, maxExcerptChars);
+  if (used + excerpt.length > maxChars && kept.length > 0) {
+    return { kept: false, used };
+  }
+
+  seen.add(node.id);
+  kept.push({ ...node, excerpt });
+  return { kept: true, used: used + excerpt.length };
+}
+
 /**
  * Applies a deterministic budget to ConversationIR.
- * Preserves score order; recomputes confidence from remaining engines.
+ *
+ * Anchors (metadata / context engines) are reserved first so a low-scoring
+ * carry-over focus node cannot be silently dropped by BM25 flood, then the
+ * remaining topK slots fill by score order. Character budget still applies.
  */
 export function applyBudget(ir: ConversationIR, options: BudgetOptions = {}): ConversationIR {
   const { topK, maxChars, maxExcerptChars } = { ...DEFAULTS, ...options };
@@ -36,23 +61,28 @@ export function applyBudget(ir: ConversationIR, options: BudgetOptions = {}): Co
   const kept: CandidateNode[] = [];
   let used = 0;
 
+  const anchorIds = new Set(ir.anchorNodes.map((n) => n.id));
+  const candidateById = new Map(ir.candidateNodes.map((n) => [n.id, n]));
+
+  // Pass 1: reserve every anchor that still appears in candidates.
+  for (const anchor of ir.anchorNodes) {
+    const node = candidateById.get(anchor.id) ?? anchor;
+    const result = tryKeep(node, kept, seen, used, topK, maxChars, maxExcerptChars);
+    used = result.used;
+  }
+
+  // Pass 2: fill remaining topK by existing score order.
   for (const node of ir.candidateNodes) {
     if (kept.length >= topK) break;
-    if (seen.has(node.id)) continue;
-    seen.add(node.id);
-
-    const excerpt = truncate(node.excerpt, maxExcerptChars);
-    if (used + excerpt.length > maxChars && kept.length > 0) break;
-
-    kept.push({ ...node, excerpt });
-    used += excerpt.length;
+    if (anchorIds.has(node.id) && seen.has(node.id)) continue;
+    const result = tryKeep(node, kept, seen, used, topK, maxChars, maxExcerptChars);
+    used = result.used;
   }
 
   const keptIds = new Set(kept.map((n) => n.id));
-  const anchorNodes = ir.anchorNodes.filter((n) => keptIds.has(n.id)).map((n) => {
-    const match = kept.find((k) => k.id === n.id)!;
-    return match;
-  });
+  const anchorNodes = ir.anchorNodes
+    .filter((n) => keptIds.has(n.id))
+    .map((n) => kept.find((k) => k.id === n.id)!);
 
   const edges = ir.edges.filter((e) => keptIds.has(e.source) && keptIds.has(e.target));
   const retrievalTrace = ir.retrievalTrace.map((step) => ({

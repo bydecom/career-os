@@ -10,6 +10,7 @@ import type { ConversationIR, RetrievalEngine } from './types.js';
 const ENGINE_LABEL: Record<RetrievalEngine, string> = {
   metadata: 'Metadata',
   graph: 'Graph',
+  context: 'Context',
   bm25: 'BM25',
   vector: 'Vector',
 };
